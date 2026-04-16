@@ -1,0 +1,132 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum StreamStatus {
+  IDLE
+  STARTING
+  LIVE
+  STOPPING
+  STOPPED
+  ERROR
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  username     String    @unique
+  passwordHash String
+  firstName    String?
+  lastName     String?
+  avatar       String?
+  role         String    @default("user")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  streams      Stream[]
+  apiKeys      ApiKey[]
+}
+
+model ApiKey {
+  id        String    @id @default(cuid())
+  userId    String
+  name      String
+  key       String    @unique
+  platform  String
+  createdAt DateTime  @default(now())
+  lastUsed  DateTime?
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Stream {
+  id           String        @id @default(cuid())
+  userId       String
+  title        String
+  description  String?
+  streamKey    String        @unique
+  destinations Json          @default("[]")
+  status       StreamStatus  @default(IDLE)
+  isLive       Boolean       @default(false)
+  scheduledAt  DateTime?
+  startedAt    DateTime?
+  endedAt      DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stats        StreamStats[]
+  vdoRoom      VdoRoom?
+  chatMessages ChatMessage[]
+}
+
+model StreamStats {
+  id         String   @id @default(cuid())
+  streamId   String
+  viewers    Int      @default(0)
+  bitrate    Float    @default(0)
+  fps        Float    @default(0)
+  resolution String?
+  duration   Int      @default(0)
+  timestamp  DateTime @default(now())
+  stream     Stream   @relation(fields: [streamId], references: [id], onDelete: Cascade)
+}
+
+model VdoRoom {
+  id          String           @id @default(cuid())
+  streamId    String           @unique
+  roomName    String           @unique
+  password    String
+  directorUrl String
+  guestUrl    String
+  createdAt   DateTime         @default(now())
+  stream      Stream           @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  participants VdoParticipant[]
+}
+
+model VdoParticipant {
+  id       String    @id @default(cuid())
+  roomId   String
+  viewId   String
+  name     String
+  role     String    @default("guest")
+  isActive Boolean   @default(true)
+  joinedAt DateTime  @default(now())
+  leftAt   DateTime?
+  room     VdoRoom   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+}
+
+model ChatMessage {
+  id               String   @id @default(cuid())
+  streamId         String
+  username         String
+  message          String
+  platform         String   @default("internal")
+  isModerated      Boolean  @default(false)
+  moderationResult Json?
+  timestamp        DateTime @default(now())
+  stream           Stream   @relation(fields: [streamId], references: [id], onDelete: Cascade)
+}
+
+model AiJob {
+  id          String    @id @default(cuid())
+  type        String
+  status      String    @default("pending")
+  input       Json
+  output      Json?
+  error       String?
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+}
+
+model SystemMetrics {
+  id             String   @id @default(cuid())
+  cpuUsage       Float    @default(0)
+  memoryUsage    Float    @default(0)
+  activeStreams   Int      @default(0)
+  totalViewers   Int      @default(0)
+  totalBandwidth Float    @default(0)
+  timestamp      DateTime @default(now())
+}
