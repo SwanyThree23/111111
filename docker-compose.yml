@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: livestream
+      POSTGRES_USER: swanythree
+      POSTGRES_PASSWORD: changeme
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  backend:
+    build: ./backend
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: postgresql://swanythree:changeme@postgres:5432/livestream
+      REDIS_HOST: redis
+    depends_on: [postgres, redis]
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    depends_on: [backend]
+
+volumes:
+  postgres_data:
