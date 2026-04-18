@@ -91,7 +91,7 @@ export default function WatchPage() {
                 {stream.description && <p className="text-gray-400 text-sm mt-2">{stream.description}</p>}
               </div>
               {user?.id !== stream.creatorId && stream.creator.stripeOnboarded && (
-                <TipJar streamId={stream.id} creatorId={stream.creatorId} />
+                <TipJar streamId={stream.id} />
               )}
             </div>
           </div>
