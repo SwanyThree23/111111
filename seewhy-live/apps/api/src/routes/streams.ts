@@ -46,7 +46,7 @@ router.get('/', async (req, res) => {
   const [streams, total] = await Promise.all([
     prisma.stream.findMany({
       where,
-      include: { creator: { select: { id: true, username: true, displayName: true, avatarUrl: true } } },
+      include: { creator: { select: { id: true, username: true, displayName: true, avatarUrl: true, badge: true } } },
       orderBy: [{ status: 'asc' }, { viewerCount: 'desc' }],
       take: parseInt(limit),
       skip: parseInt(offset),

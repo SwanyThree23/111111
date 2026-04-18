@@ -68,4 +68,45 @@ router.get('/dashboard', authenticate, async (req: AuthRequest, res: Response) =
   return res.json({ totalStreams, liveStreams, totalEarnings: totalEarnings._sum.creatorAmount ?? 0, totalMessages });
 });
 
+// --- Public leaderboard ---
+router.get('/leaderboard', async (_req, res: Response) => {
+  const topCreators = await prisma.transaction.groupBy({
+    by: ['creatorId'],
+    where: { status: 'succeeded' },
+    _sum: { creatorAmount: true },
+    _count: true,
+    orderBy: { _sum: { creatorAmount: 'desc' } },
+    take: 10,
+  });
+
+  const creatorIds = topCreators.map((t) => t.creatorId);
+  const users = await prisma.user.findMany({
+    where: { id: { in: creatorIds } },
+    select: { id: true, username: true, displayName: true, avatarUrl: true, badge: true },
+  });
+
+  const userMap = new Map(users.map((u) => [u.id, u]));
+
+  const leaderboard = topCreators.map((entry) => ({
+    user: userMap.get(entry.creatorId) ?? null,
+    totalEarnings: Number(entry._sum.creatorAmount ?? 0),
+    transactionCount: entry._count,
+  }));
+
+  return res.json({ leaderboard });
+});
+
+// --- Platform viewer stats ---
+router.get('/viewer-stats', async (_req, res: Response) => {
+  const [liveStreams, totalViewers] = await Promise.all([
+    prisma.stream.count({ where: { status: 'live' } }),
+    prisma.stream.aggregate({ where: { status: 'live' }, _sum: { viewerCount: true } }),
+  ]);
+
+  return res.json({
+    liveStreams,
+    totalViewers: totalViewers._sum.viewerCount ?? 0,
+  });
+});
+
 export default router;
