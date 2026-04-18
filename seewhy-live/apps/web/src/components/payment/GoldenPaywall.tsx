@@ -33,7 +33,7 @@ export function GoldenPaywall({ streamId, creatorId, onUnlocked, onClose }: Prop
         successUrl: `${window.location.href}?subscribed=true`,
         cancelUrl: window.location.href,
       });
-      window.location.href = checkoutUrl;
+      window.location.assign(checkoutUrl);
     } catch (err) {
       toast.error((err as Error).message);
     } finally {

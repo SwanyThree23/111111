@@ -13,12 +13,11 @@ const PRESETS = [
   { amount: 25, label: '$25', icon: DollarSign, color: '#A855F7' },
 ] as const;
 
-export function TipJar({ streamId, creatorId }: { streamId: string; creatorId: string }) {
+export function TipJar({ streamId }: { streamId: string; creatorId: string }) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [custom, setCustom] = useState('');
   const [loading, setLoading] = useState(false);
-  const [celebrated, setCelebrated] = useState(false);
 
   const tip = async (amountDollars: number) => {
     if (!user) { toast.error('Sign in to tip'); return; }
