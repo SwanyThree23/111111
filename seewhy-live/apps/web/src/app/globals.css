@@ -29,7 +29,7 @@ body {
 .font-accent { font-family: var(--font-lora), serif; }
 
 .live-badge {
-  @apply inline-flex items-center gap-1.5 bg-[#FF3B3B] text-white text-xs font-bold px-2 py-0.5 rounded-full;
+  @apply inline-flex items-center gap-1.5 bg-[var(--red)] text-white text-xs font-bold px-2 py-0.5 rounded-full;
   animation: pulse-badge 2s infinite;
 }
 
@@ -42,19 +42,19 @@ body {
 .gold-glow { box-shadow: 0 0 20px rgba(212, 175, 55, 0.3); }
 
 .card {
-  @apply bg-[#161616] border border-[#1E1E1E] rounded-xl p-4;
+  @apply bg-[var(--dark-s2)] border border-[var(--border)] rounded-xl p-4;
 }
 
 .btn-volt {
-  @apply bg-[#C8FF00] text-[#0C0806] font-bold px-6 py-3 rounded-xl hover:bg-[#d4ff33] transition-all active:scale-95 font-ui;
+  @apply bg-[var(--volt)] text-[var(--background)] font-bold px-6 py-3 rounded-xl hover:bg-[#d4ff33] transition-all active:scale-95 font-ui;
 }
 
 .btn-ghost {
-  @apply border border-[#242424] text-white px-6 py-3 rounded-xl hover:bg-[#1A1A1A] transition-all active:scale-95;
+  @apply border border-[var(--border-light)] text-white px-6 py-3 rounded-xl hover:bg-[var(--dark-s3)] transition-all active:scale-95;
 }
 
 .input {
-  @apply bg-[#1A1A1A] border border-[#242424] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#C8FF00] transition-colors w-full;
+  @apply bg-[var(--dark-s3)] border border-[var(--border-light)] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[var(--volt)] transition-colors w-full;
 }
 
 .scrollbar-thin::-webkit-scrollbar { width: 4px; }
