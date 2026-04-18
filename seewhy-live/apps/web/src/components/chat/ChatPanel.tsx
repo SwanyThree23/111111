@@ -180,8 +180,8 @@ export function ChatPanel({ streamId }: { streamId: string }) {
                     <span className="text-[#D4AF37] font-mono-custom text-xs ml-auto">${msg.amount}</span>
                   </div>
                   <div className="text-sm">
-                    {msg.user?.role && <RoleBadge role={msg.user.role} />}
-                    <span className="font-semibold mr-1.5" style={{ color: getUsernameColor(msg.user?.role) }}>
+                    {(() => { const b = getDisplayBadge(msg.user); return b ? <RoleBadge role={b} /> : null; })()}
+                    <span className="font-semibold mr-1.5" style={{ color: getUsernameColor(getDisplayBadge(msg.user) ?? undefined) }}>
                       {msg.user?.displayName ?? msg.user?.username ?? 'Aura'}
                     </span>
                     <span className="text-gray-200">{msg.content}</span>
@@ -192,8 +192,8 @@ export function ChatPanel({ streamId }: { streamId: string }) {
               {/* Regular message */}
               {msg.type !== 'system' && msg.type !== 'superchat' && (
                 <div className="text-sm py-0.5 px-1 rounded hover:bg-white/[0.03] transition-colors group">
-                  {msg.user?.role && <RoleBadge role={msg.user.role} />}
-                  <span className="font-semibold mr-1.5" style={{ color: getUsernameColor(msg.user?.role) }}>
+                  {(() => { const b = getDisplayBadge(msg.user); return b ? <RoleBadge role={b} /> : null; })()}
+                  <span className="font-semibold mr-1.5" style={{ color: getUsernameColor(getDisplayBadge(msg.user) ?? undefined) }}>
                     {msg.user?.displayName ?? msg.user?.username ?? 'Aura'}
                   </span>
                   <span className="text-gray-300">{msg.content}</span>
