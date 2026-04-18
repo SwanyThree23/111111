@@ -22,12 +22,14 @@ body {
   font-family: var(--font-inter), sans-serif;
 }
 
+/* ═══ Typography ═══ */
 .font-display { font-family: var(--font-bebas), sans-serif; }
 .font-mono-custom { font-family: var(--font-mono), monospace; }
 .font-ui { font-family: var(--font-syne), sans-serif; }
 .font-prose { font-family: var(--font-inter), sans-serif; }
 .font-accent { font-family: var(--font-lora), serif; }
 
+/* ═══ Live Badge ═══ */
 .live-badge {
   @apply inline-flex items-center gap-1.5 bg-[var(--red)] text-white text-xs font-bold px-2 py-0.5 rounded-full;
   animation: pulse-badge 2s infinite;
@@ -38,13 +40,28 @@ body {
   50% { opacity: 0.7; }
 }
 
+/* ═══ Glow Effects ═══ */
 .volt-glow { box-shadow: 0 0 20px rgba(200, 255, 0, 0.3); }
 .gold-glow { box-shadow: 0 0 20px rgba(212, 175, 55, 0.3); }
+.purple-glow { box-shadow: 0 0 20px rgba(168, 85, 247, 0.3); }
+.teal-glow { box-shadow: 0 0 20px rgba(0, 229, 204, 0.3); }
+.red-glow { box-shadow: 0 0 20px rgba(255, 59, 59, 0.3); }
 
+/* ═══ Cards ═══ */
 .card {
   @apply bg-[var(--dark-s2)] border border-[var(--border)] rounded-xl p-4;
 }
 
+.card-hover {
+  @apply bg-[var(--dark-s2)] border border-[var(--border)] rounded-xl p-4 transition-all duration-300;
+}
+.card-hover:hover {
+  border-color: var(--border-light);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* ═══ Buttons ═══ */
 .btn-volt {
   @apply bg-[var(--volt)] text-[var(--background)] font-bold px-6 py-3 rounded-xl hover:bg-[#d4ff33] transition-all active:scale-95 font-ui;
 }
@@ -53,10 +70,92 @@ body {
   @apply border border-[var(--border-light)] text-white px-6 py-3 rounded-xl hover:bg-[var(--dark-s3)] transition-all active:scale-95;
 }
 
+.btn-gold {
+  @apply bg-gradient-to-r from-[var(--gold)] to-[#b8972e] text-[var(--background)] font-bold px-6 py-3 rounded-xl hover:brightness-110 transition-all active:scale-95 font-ui;
+}
+
+.btn-danger {
+  @apply bg-[var(--red)]/10 text-[var(--red)] border border-[var(--red)]/30 font-bold px-6 py-3 rounded-xl hover:bg-[var(--red)]/20 transition-all active:scale-95;
+}
+
+/* ═══ Inputs ═══ */
 .input {
   @apply bg-[var(--dark-s3)] border border-[var(--border-light)] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[var(--volt)] transition-colors w-full;
 }
 
+.input:focus {
+  box-shadow: 0 0 0 2px rgba(200, 255, 0, 0.1);
+}
+
+/* ═══ Scrollbar ═══ */
 .scrollbar-thin::-webkit-scrollbar { width: 4px; }
 .scrollbar-thin::-webkit-scrollbar-track { background: var(--dark-s1); }
 .scrollbar-thin::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 2px; }
+.scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #3a3a3a; }
+
+/* ═══ Glassmorphism ═══ */
+.glass {
+  background: rgba(22, 22, 22, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.glass-dark {
+  background: rgba(12, 8, 6, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/* ═══ Gradient Text ═══ */
+.text-gradient-volt {
+  background: linear-gradient(135deg, #C8FF00, #00E5CC);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-gold {
+  background: linear-gradient(135deg, #D4AF37, #F5D680);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ═══ Skeleton Loading ═══ */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--dark-s2) 25%, var(--dark-s3) 50%, var(--dark-s2) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+/* ═══ Badge Pulse ═══ */
+@keyframes badge-glow {
+  0%, 100% { box-shadow: 0 0 4px rgba(212, 175, 55, 0.3); }
+  50% { box-shadow: 0 0 12px rgba(212, 175, 55, 0.5); }
+}
+
+.badge-founder {
+  animation: badge-glow 3s ease-in-out infinite;
+}
+
+/* ═══ Toggle Switch ═══ */
+.toggle-track {
+  @apply relative w-11 h-6 rounded-full transition-colors cursor-pointer;
+}
+
+.toggle-thumb {
+  @apply absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform;
+}
+
+/* ═══ Responsive Helpers ═══ */
+@media (max-width: 768px) {
+  .font-display { letter-spacing: 0.02em; }
+}
