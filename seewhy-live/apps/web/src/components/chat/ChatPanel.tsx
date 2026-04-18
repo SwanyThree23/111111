@@ -72,7 +72,7 @@ export function ChatPanel({ streamId }: { streamId: string }) {
     <div className="card h-[600px] flex flex-col p-0 overflow-hidden">
       <div className="px-4 py-3 border-b border-[#1E1E1E] flex items-center justify-between">
         <span className="font-ui text-sm font-semibold">Live Chat</span>
-        <Shield size={14} className="text-[#A855F7]" title="Guardian AI moderation active" />
+        <Shield size={14} className="text-[#A855F7]" />
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-thin">
