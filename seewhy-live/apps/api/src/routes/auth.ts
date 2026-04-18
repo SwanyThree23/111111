@@ -30,12 +30,12 @@ router.post('/register', rateLimit(5, 60, 'auth_register'), async (req, res) => 
 
   const { email, username, password, displayName } = parsed.data;
 
-  const existing = await prisma.user.findFirst({ where: { OR: [{ username }] } });
-  if (existing) return res.status(409).json({ error: 'Username already taken' });
+  const existing = await prisma.user.findFirst({ where: { OR: [{ email }, { username }] } });
+  if (existing) return res.status(409).json({ error: 'Email or Username already taken' });
 
   const passwordHash = await bcrypt.hash(password, 12);
   const user = await prisma.user.create({
-    data: { id: randomBytes(16).toString('hex'), username, displayName, role: 'viewer' },
+    data: { email, username, passwordHash, displayName, role: 'viewer' },
   });
 
   await prisma.creatorOnboarding.create({ data: { userId: user.id } });
@@ -54,9 +54,11 @@ router.post('/login', rateLimit(10, 60, 'auth_login'), async (req, res) => {
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
 
   const { email, password } = parsed.data;
-  // NOTE: In production integrate with Supabase Auth for email lookup
-  const user = await prisma.user.findFirst({ where: { username: email } });
+  const user = await prisma.user.findFirst({ where: { OR: [{ email: email }, { username: email }] } });
   if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+
+  const valid = await bcrypt.compare(password, user.passwordHash);
+  if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
 
   const familyId = randomBytes(16).toString('hex');
   const accessToken = issueAccessToken({ sub: user.id, email, role: user.role, familyId });

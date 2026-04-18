@@ -44,6 +44,9 @@ const allowedOrigins = process.env.CORS_ORIGINS?.split(',') ?? ['http://localhos
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(cookieParser());
 
+// Global Rate Limit
+app.use('/api', rateLimit(100, 60, 'global'));
+
 // Stripe webhook needs raw body
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '10mb' }));
@@ -102,6 +105,14 @@ async function start() {
     logger.info(`SeeWhy LIVE API running on port ${PORT}`);
   });
 }
+
+// Error handling
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  logger.error('Unhandled Error', { error: err.message, stack: err.stack, path: req.path });
+  res.status(err.status ?? 500).json({
+    error: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : err.message,
+  });
+});
 
 process.on('SIGTERM', async () => {
   logger.info('SIGTERM received, graceful shutdown...');
