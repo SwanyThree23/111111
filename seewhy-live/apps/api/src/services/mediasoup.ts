@@ -151,6 +151,17 @@ export async function closeRouter(streamId: string): Promise<void> {
   if (router) {
     router.close();
     routers.delete(streamId);
+
+    // Cleanup associated resources from local maps
+    for (const [id, transport] of transports.entries()) {
+      if (transport.closed) transports.delete(id);
+    }
+    for (const [id, producer] of producers.entries()) {
+      if (producer.closed) producers.delete(id);
+    }
+    for (const [id, consumer] of consumers.entries()) {
+      if (consumer.closed) consumers.delete(id);
+    }
   }
 }
 

@@ -25,8 +25,27 @@ export default function LoginPage() {
       <div className="card w-full max-w-md">
         <h1 className="font-display text-4xl text-[#C8FF00] mb-6">SIGN IN</h1>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <input className="input" type="email" placeholder="Email" value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} required />
-          <input className="input" type="password" placeholder="Password" value={form.password} onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))} required />
+          <div className="space-y-1">
+            <label className="text-xs text-gray-500 font-ui uppercase px-1">Username or Email</label>
+            <input 
+              className="input transition-all focus:border-[#C8FF00]" 
+              placeholder="e.g. aura_stream or aura@example.com" 
+              value={form.email} 
+              onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} 
+              required 
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-gray-500 font-ui uppercase px-1">Password</label>
+            <input 
+              className="input transition-all focus:border-[#C8FF00]" 
+              type="password" 
+              placeholder="••••••••" 
+              value={form.password} 
+              onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))} 
+              required 
+            />
+          </div>
           <button type="submit" className="btn-volt w-full" disabled={isLoading}>
             {isLoading ? 'Signing in...' : 'Sign In'}
           </button>
