@@ -103,4 +103,66 @@ router.post('/logout', async (req, res) => {
   return res.json({ success: true });
 });
 
+// --- Profile / Settings endpoints ---
+import { authenticate, AuthRequest } from '../middleware/auth.js';
+
+const ProfileUpdateSchema = z.object({
+  displayName: z.string().max(50).optional(),
+  bio: z.string().max(200).optional(),
+  avatarUrl: z.string().url().optional(),
+});
+
+router.patch('/profile', authenticate, async (req: AuthRequest, res) => {
+  const parsed = ProfileUpdateSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+
+  const updated = await prisma.user.update({
+    where: { id: req.user!.id },
+    data: parsed.data,
+    select: { id: true, username: true, displayName: true, avatarUrl: true, bio: true, role: true, badge: true },
+  });
+
+  return res.json(updated);
+});
+
+router.get('/me', authenticate, async (req: AuthRequest, res) => {
+  const user = await prisma.user.findUnique({
+    where: { id: req.user!.id },
+    select: {
+      id: true, username: true, email: true, displayName: true,
+      avatarUrl: true, bio: true, role: true, badge: true,
+      stripeOnboarded: true, createdAt: true,
+    },
+  });
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  return res.json(user);
+});
+
+const ChangePasswordSchema = z.object({
+  currentPassword: z.string(),
+  newPassword: z.string().min(8),
+});
+
+router.post('/change-password', authenticate, rateLimit(3, 300, 'auth_change_pw'), async (req: AuthRequest, res) => {
+  const parsed = ChangePasswordSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+
+  const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
+  if (!user) return res.status(404).json({ error: 'User not found' });
+
+  const valid = await bcrypt.compare(parsed.data.currentPassword, user.passwordHash);
+  if (!valid) return res.status(401).json({ error: 'Current password is incorrect' });
+
+  const newHash = await bcrypt.hash(parsed.data.newPassword, 12);
+  await prisma.user.update({ where: { id: user.id }, data: { passwordHash: newHash } });
+
+  return res.json({ success: true });
+});
+
+router.delete('/account', authenticate, async (req: AuthRequest, res) => {
+  await prisma.user.delete({ where: { id: req.user!.id } });
+  res.clearCookie('refresh_token');
+  return res.json({ success: true });
+});
+
 export default router;

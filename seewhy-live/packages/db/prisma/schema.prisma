@@ -18,6 +18,7 @@ model User {
   stripeAccountId   String?  @map("stripe_account_id")
   stripeOnboarded   Boolean  @default(false) @map("stripe_onboarded")
   role              String   @default("viewer")
+  badge             String?  @map("badge")
   createdAt         DateTime @default(now()) @map("created_at")
 
   streams            Stream[]           @relation("CreatorStreams")
