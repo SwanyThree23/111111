@@ -46,7 +46,7 @@ router.post('/register', rateLimit(5, 60, 'auth_register'), async (req, res) => 
   await storeRefreshToken(jti, familyId, user.id);
 
   res.cookie('refresh_token', refreshToken, { httpOnly: true, secure: true, sameSite: 'strict', maxAge: REFRESH_EXPIRY * 1000 });
-  return res.status(201).json({ accessToken, user: { id: user.id, username, displayName, role: user.role } });
+  return res.status(201).json({ accessToken, user: { id: user.id, username, displayName, role: user.role, badge: user.badge } });
 });
 
 router.post('/login', rateLimit(10, 60, 'auth_login'), async (req, res) => {
@@ -66,7 +66,7 @@ router.post('/login', rateLimit(10, 60, 'auth_login'), async (req, res) => {
   await storeRefreshToken(jti, familyId, user.id);
 
   res.cookie('refresh_token', refreshToken, { httpOnly: true, secure: true, sameSite: 'strict', maxAge: REFRESH_EXPIRY * 1000 });
-  return res.json({ accessToken, user: { id: user.id, username: user.username, displayName: user.displayName, role: user.role } });
+  return res.json({ accessToken, user: { id: user.id, username: user.username, displayName: user.displayName, role: user.role, badge: user.badge } });
 });
 
 router.post('/refresh', async (req, res) => {

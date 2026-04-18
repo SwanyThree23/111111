@@ -5,9 +5,12 @@ import { api, setAccessToken } from '@/lib/api';
 interface User {
   id: string;
   username: string;
+  email?: string;
   displayName: string | null;
   avatarUrl: string | null;
+  bio?: string;
   role: string;
+  badge?: string | null;
 }
 
 interface AuthState {

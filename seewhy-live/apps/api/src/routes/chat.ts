@@ -27,7 +27,7 @@ router.post('/:streamId/messages', authenticate, rateLimit(30, 60, 'chat'), asyn
       type,
       amount,
     },
-    include: { user: { select: { id: true, username: true, displayName: true, avatarUrl: true } } },
+    include: { user: { select: { id: true, username: true, displayName: true, avatarUrl: true, role: true, badge: true } } },
   });
 
   // Guardian AI moderation (async — don't block response)
@@ -44,7 +44,7 @@ router.get('/:streamId/messages', async (req, res) => {
       isDeleted: false,
       ...(before ? { createdAt: { lt: new Date(before) } } : {}),
     },
-    include: { user: { select: { id: true, username: true, displayName: true, avatarUrl: true } } },
+    include: { user: { select: { id: true, username: true, displayName: true, avatarUrl: true, role: true, badge: true } } },
     orderBy: { createdAt: 'desc' },
     take: parseInt(limit),
   });

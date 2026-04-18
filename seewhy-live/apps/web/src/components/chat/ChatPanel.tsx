@@ -19,7 +19,7 @@ interface Message {
   amount: number | null;
   moderationScore: number | null;
   createdAt: string;
-  user: { id: string; username: string; displayName: string | null; avatarUrl: string | null; role?: string } | null;
+  user: { id: string; username: string; displayName: string | null; avatarUrl: string | null; role?: string; badge?: string | null } | null;
 }
 
 // --- Role badge configuration ---
@@ -50,6 +50,14 @@ function RoleBadge({ role }: { role: string }) {
 function getUsernameColor(role?: string): string {
   if (role && ROLE_CONFIG[role]) return ROLE_CONFIG[role].color;
   return '#C8FF00';
+}
+
+// --- Resolve display badge: prefer user.badge, fall back to role if notable ---
+function getDisplayBadge(user: Message['user']): string | null {
+  if (!user) return null;
+  if (user.badge && ROLE_CONFIG[user.badge]) return user.badge;
+  if (user.role && user.role !== 'viewer' && ROLE_CONFIG[user.role]) return user.role;
+  return null;
 }
 
 // --- Message animation variants ---
