@@ -30,6 +30,22 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
   }
 }
 
+export async function optionalAuthenticate(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    return next();
+  }
+
+  const token = authHeader.slice(7);
+  try {
+    const payload = verifyAccessToken(token);
+    if (!(await isTokenRevoked(payload.jti))) {
+      req.user = { id: payload.sub, email: payload.email, role: payload.role };
+    }
+  } catch {}
+  next();
+}
+
 export function requireRole(role: string) {
   return (req: AuthRequest, res: Response, next: NextFunction): void => {
     if (!req.user || req.user.role !== role) {

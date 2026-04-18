@@ -19,6 +19,7 @@ import { createWorkerPool, gracefulShutdown } from './services/mediasoup.js';
 import { prisma } from './services/db.js';
 import redis from './services/redis.js';
 import logger from './services/logger.js';
+import { rateLimit } from './middleware/rateLimit.js';
 
 const app = express();
 const httpServer = createServer(app);
