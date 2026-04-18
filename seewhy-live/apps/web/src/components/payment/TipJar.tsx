@@ -30,7 +30,7 @@ export function TipJar({ streamId, creatorId }: { streamId: string; creatorId: s
         successUrl: `${window.location.href}?tipped=true`,
         cancelUrl: window.location.href,
       });
-      window.location.href = checkoutUrl;
+      window.location.assign(checkoutUrl);
     } catch (err) {
       toast.error((err as Error).message);
     } finally {

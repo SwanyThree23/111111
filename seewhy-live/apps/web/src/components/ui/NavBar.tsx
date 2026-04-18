@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useAuth } from '@/store/auth';
-import { Zap, User, LogOut, BarChart2 } from 'lucide-react';
+import { Zap, LogOut, BarChart2 } from 'lucide-react';
 
 export function NavBar() {
   const { user, logout } = useAuth();
