@@ -80,22 +80,35 @@ app.get('/health/deep', async (_, res) => {
 
 // MediaSoup signaling via Socket.io
 io.on('connection', (socket) => {
-  socket.on('join-stream', (streamId: string) => socket.join(`stream:${streamId}`));
-  socket.on('leave-stream', (streamId: string) => socket.leave(`stream:${streamId}`));
-
-  socket.on('viewer-join', async ({ streamId }) => {
-    await prisma.stream.update({
-      where: { id: streamId },
-      data: { viewerCount: { increment: 1 } },
-    });
-    io.to(`stream:${streamId}`).emit('viewer-count-update', { streamId });
+  socket.on('join-stream', async (streamId: string) => {
+    socket.join(`stream:${streamId}`);
+    const key = `stream:${streamId}:viewers`;
+    await redis.sadd(key, socket.id);
+    const count = await redis.scard(key);
+    io.to(`stream:${streamId}`).emit('viewer-count', { count });
+    
+    // Periodic sync to DB could be added in a worker
+    await prisma.stream.update({ where: { id: streamId }, data: { viewerCount: count } }).catch(() => {});
   });
 
-  socket.on('viewer-leave', async ({ streamId }) => {
-    await prisma.stream.update({
-      where: { id: streamId },
-      data: { viewerCount: { decrement: 1 } },
-    }).catch(() => {});
+  socket.on('leave-stream', async (streamId: string) => {
+    socket.leave(`stream:${streamId}`);
+    const key = `stream:${streamId}:viewers`;
+    await redis.srem(key, socket.id);
+    const count = await redis.scard(key);
+    io.to(`stream:${streamId}`).emit('viewer-count', { count });
+  });
+
+  socket.on('disconnecting', async () => {
+    for (const room of socket.rooms) {
+      if (room.startsWith('stream:')) {
+        const streamId = room.split(':')[1];
+        const key = `stream:${streamId}:viewers`;
+        await redis.srem(key, socket.id);
+        const count = await redis.scard(key);
+        io.to(room).emit('viewer-count', { count });
+      }
+    }
   });
 });
 
