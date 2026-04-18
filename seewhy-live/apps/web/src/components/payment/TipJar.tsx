@@ -13,7 +13,7 @@ const PRESETS = [
   { amount: 25, label: '$25', icon: DollarSign, color: '#A855F7' },
 ] as const;
 
-export function TipJar({ streamId }: { streamId: string; creatorId: string }) {
+export function TipJar({ streamId }: { streamId: string }) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [custom, setCustom] = useState('');

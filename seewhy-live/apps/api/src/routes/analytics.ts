@@ -25,7 +25,7 @@ router.get('/earnings', authenticate, async (req: AuthRequest, res: Response) =>
     }),
   ]);
 
-  const totals = transactions.reduce((acc, t) => ({
+  const totals = transactions.reduce((acc: { gross: number; creator: number; platform: number }, t: any) => ({
     gross: acc.gross + Number(t.grossAmount),
     creator: acc.creator + Number(t.creatorAmount),
     platform: acc.platform + Number(t.platformAmount),

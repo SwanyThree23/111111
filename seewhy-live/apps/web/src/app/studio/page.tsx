@@ -93,7 +93,7 @@ export default function StudioPage() {
                     ))}
                   </select>
                   <label className="flex items-center gap-2 text-sm text-gray-400">
-                    <input type="checkbox" checked={newStream.isPublic} onChange={(e) => setNewStream((p) => ({ ...p, isPublic: e.target.checked })} />
+                    <input type="checkbox" checked={newStream.isPublic} onChange={(e) => setNewStream((p) => ({ ...p, isPublic: e.target.checked }))} />
                     Public stream
                   </label>
                   <button onClick={() => createStream.mutate()} className="btn-volt w-full" disabled={createStream.isPending || !newStream.title}>
