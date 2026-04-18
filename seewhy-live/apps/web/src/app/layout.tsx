@@ -12,6 +12,9 @@ const lora = Lora({ subsets: ['latin'], variable: '--font-lora' });
 export const metadata: Metadata = {
   title: 'SeeWhy LIVE — Creator-First Streaming',
   description: 'Multi-platform live streaming with real-time AI, WebRTC guests, and 90/10 monetization.',
+};
+
+export const viewport = {
   themeColor: '#C8FF00',
 };
 
