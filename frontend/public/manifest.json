@@ -1,0 +1,43 @@
+{
+  "name": "SwanyThree - Live Streaming Platform",
+  "short_name": "SwanyThree",
+  "description": "Complete creator streaming platform — multi-platform live, watch parties, AI moderation, and 90/10 tips",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1e0938",
+  "theme_color": "#7c3aed",
+  "orientation": "portrait-primary",
+  "categories": ["entertainment", "social", "utilities"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Go Live",
+      "url": "/go-live",
+      "description": "Start a new live stream"
+    },
+    {
+      "name": "Watch Party",
+      "url": "/watch-party/new",
+      "description": "Host a watch party"
+    },
+    {
+      "name": "Dashboard",
+      "url": "/dashboard",
+      "description": "View your streams"
+    }
+  ]
+}
