@@ -22,6 +22,7 @@ import logger from './services/logger.js';
 import { rateLimit } from './middleware/rateLimit.js';
 
 const app = express();
+app.set('trust proxy', 1);
 const httpServer = createServer(app);
 
 const io = new SocketServer(httpServer, {
