@@ -1,0 +1,38 @@
+logLevel: info
+logDestinations: [stdout]
+
+rtmpAddress: :1935
+rtmpsAddress: :1936
+hlsAddress: :8888
+webrtcAddress: :8889
+apiAddress: :9997
+
+api: yes
+apiEncryption: no
+
+rtmp: yes
+rtmps: no
+hls: yes
+webrtc: yes
+
+hlsAlwaysRemuxMuxer: no
+hlsVariant: lowLatency
+hlsSegmentCount: 7
+hlsSegmentDuration: 1s
+hlsPartDuration: 200ms
+
+webrtcICEServers:
+- url: stun:stun.l.google.com:19302
+
+pathDefaults:
+  publishUser:
+  publishPass:
+  readUser:
+  readPass:
+  runOnInit:
+  runOnDemand:
+  runOnPublish: "ffmpeg -re -i rtmp://localhost:$RTMP_PORT/$MTX_PATH -c:v copy -c:a aac -f flv rtmp://localhost/passthrough/$MTX_STREAM_QUERY"
+  runOnPublishRestart: no
+  runOnUnpublish:
+  runOnRead:
+  runOnUnread:
