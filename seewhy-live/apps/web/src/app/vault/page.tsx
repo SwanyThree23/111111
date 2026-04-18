@@ -29,7 +29,7 @@ export default function VaultPage() {
     queryKey: ['ai-job', jobId],
     queryFn: () => api.get<AiJob>(`/api/vods/jobs/${jobId}`),
     enabled: !!jobId,
-    refetchInterval: (data) => data?.status === 'processing' || data?.status === 'queued' ? 3000 : false,
+    refetchInterval: (query) => query.state.data?.status === 'processing' || query.state.data?.status === 'queued' ? 3000 : false,
   });
 
   const repurpose = useMutation({
