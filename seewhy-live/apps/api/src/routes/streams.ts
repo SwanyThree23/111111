@@ -57,6 +57,13 @@ router.get('/', async (req, res) => {
   return res.json({ streams, total });
 });
 
+router.get('/:id', optionalAuthenticate, async (req: AuthRequest, res: Response) => {
+  const stream = await prisma.stream.findUnique({
+    where: { id: req.params.id },
+    include: { creator: { select: { id: true, username: true, displayName: true, avatarUrl: true } } },
+  });
+  if (!stream) return res.status(404).json({ error: 'Stream not found' });
+
   const response = { ...stream };
   if (req.user?.id !== stream.creatorId) {
     delete (response as any).streamKey;
