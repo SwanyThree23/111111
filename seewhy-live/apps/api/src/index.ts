@@ -40,7 +40,7 @@ app.use(helmet({
   },
 }));
 
-const allowedOrigins = process.env.CORS_ORIGINS?.split(',') ?? ['http://localhost:3000', 'https://seewhylive.com'];
+const allowedOrigins = process.env.CORS_ORIGINS?.split(',') ?? ['http://localhost:3000', 'https://seewhylive.online'];
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(cookieParser());
 
