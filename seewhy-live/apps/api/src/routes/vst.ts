@@ -46,7 +46,7 @@ router.get('/:streamId', authenticate, async (req: AuthRequest, res: Response) =
   });
 
   const room = `vst-${req.params.streamId.slice(0, 8)}`;
-  const enriched = tracks.map((t) => ({
+  const enriched = tracks.map((t: { mode: string; vdoStreamId: string | null; faderLevel: number; [key: string]: unknown }) => ({
     ...t,
     url: t.mode === 'publish'
       ? buildVstPushUrl(room, t.vdoStreamId!, t.faderLevel)

@@ -125,7 +125,7 @@ async function logGuardianEvent(
       contentHash,
       score: result.score,
       action: result.action,
-      modelResponse: modelResponse ? (modelResponse as object) : (error ? { error: error.message } : null),
+      modelResponse: (modelResponse ?? (error ? { error: error.message } : null)) as Parameters<typeof prisma.guardianEvent.create>[0]['data']['modelResponse'],
     },
   });
 }

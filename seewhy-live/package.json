@@ -4,12 +4,14 @@
   "private": true,
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
-    "dev:api": "cd apps/api && npm run dev",
-    "dev:web": "cd apps/web && npm run dev",
-    "build:api": "cd apps/api && npm run build",
-    "build:web": "cd apps/web && npm run build",
-    "db:generate": "cd packages/db && npx prisma generate",
-    "db:migrate": "cd packages/db && npx prisma migrate deploy",
-    "db:studio": "cd packages/db && npx prisma studio"
+    "prepare": "npm run db:generate",
+    "dev:api": "npm run dev -w @seewhy/api",
+    "dev:web": "npm run dev -w @seewhy/web",
+    "build": "npm run db:generate && npm run build:api && npm run build:web",
+    "build:api": "npm run build -w @seewhy/api",
+    "build:web": "npm run build -w @seewhy/web",
+    "db:generate": "prisma generate --schema=packages/db/prisma/schema.prisma",
+    "db:migrate": "npm run migrate -w @seewhy/db",
+    "db:studio": "npm run studio -w @seewhy/db"
   }
 }

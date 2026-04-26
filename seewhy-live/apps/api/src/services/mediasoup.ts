@@ -10,17 +10,19 @@ const producers = new Map<string, mediasoup.types.Producer>();
 const consumers = new Map<string, mediasoup.types.Consumer>();
 
 const mediaCodecs: mediasoup.types.RtpCodecCapability[] = [
-  { kind: 'audio', mimeType: 'audio/opus', clockRate: 48000, channels: 2 },
+  { kind: 'audio', mimeType: 'audio/opus', clockRate: 48000, channels: 2, preferredPayloadType: 100 },
   {
     kind: 'video',
     mimeType: 'video/VP8',
     clockRate: 90000,
+    preferredPayloadType: 101,
     parameters: { 'x-google-start-bitrate': 1000 },
   },
   {
     kind: 'video',
     mimeType: 'video/H264',
     clockRate: 90000,
+    preferredPayloadType: 102,
     parameters: { 'packetization-mode': 1, 'profile-level-id': '4d0032', 'level-asymmetry-allowed': 1 },
   },
 ];
