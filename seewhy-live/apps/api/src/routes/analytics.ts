@@ -69,4 +69,31 @@ router.get('/dashboard', authenticate, async (req: AuthRequest, res: Response) =
   return res.json({ totalStreams, liveStreams, totalEarnings: totalEarnings._sum.creatorAmount ?? 0, totalMessages });
 });
 
+// Chat moderation events for the authenticated creator's streams
+router.get('/moderation', authenticate, async (req: AuthRequest, res: Response) => {
+  const { action } = req.query as { action?: string };
+
+  const events = await prisma.guardianEvent.findMany({
+    where: {
+      ...(action ? { action } : { action: { in: ['warn', 'hide', 'ban'] } }),
+      message: { stream: { creatorId: req.user!.id } },
+    },
+    include: {
+      message: {
+        select: {
+          id: true,
+          content: true,
+          userId: true,
+          isDeleted: true,
+          user: { select: { username: true, displayName: true } },
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 200,
+  });
+
+  return res.json(events);
+});
+
 export default router;

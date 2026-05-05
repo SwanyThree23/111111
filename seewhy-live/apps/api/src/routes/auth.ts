@@ -1,4 +1,5 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
+import { authenticate, AuthRequest } from '../middleware/auth.js';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { prisma } from '../services/db.js';
@@ -99,6 +100,15 @@ router.post('/refresh', async (req, res) => {
 router.post('/logout', async (req, res) => {
   res.clearCookie('refresh_token');
   return res.json({ success: true });
+});
+
+// Ban a user (creator banning a viewer from their streams)
+router.post('/users/:userId/ban', authenticate, async (req: AuthRequest, res: Response) => {
+  await prisma.user.update({
+    where: { id: req.params.userId },
+    data: { role: 'banned' },
+  });
+  return res.json({ banned: true });
 });
 
 export default router;

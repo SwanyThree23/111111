@@ -7,8 +7,13 @@ import { ChatPanel } from '@/components/chat/ChatPanel';
 import { TipJar } from '@/components/payment/TipJar';
 import { GoldenPaywall } from '@/components/payment/GoldenPaywall';
 import { DirectPayPanel } from '@/components/payment/DirectPayPanel';
-import { Eye } from 'lucide-react';
+import DirectPaySheet from '@/components/payment/DirectPaySheet';
+import ShareSheet from '@/components/social/ShareSheet';
+import PollOverlay from '@/components/polls/PollOverlay';
+import { Eye, Share2, DollarSign } from 'lucide-react';
 import { useParams } from 'next/navigation';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.seewhylive.online';
 
 const PREVIEW_SECS = 120;
 
@@ -18,6 +23,8 @@ export default function WatchPage() {
   const [previewSecsLeft, setPreviewSecsLeft] = useState(PREVIEW_SECS);
   const [paywallOpen, setPaywallOpen] = useState(false);
   const [hasAccess, setHasAccess] = useState(false);
+  const [showShare, setShowShare] = useState(false);
+  const [showDirectPay, setShowDirectPay] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const { data: stream } = useQuery({
@@ -82,6 +89,9 @@ export default function WatchPage() {
                 </span>
               </div>
             )}
+            {stream.status === 'live' && (
+              <PollOverlay streamId={stream.id} apiUrl={API_URL} />
+            )}
           </div>
           <div className="card">
             <div className="flex items-start justify-between gap-4">
@@ -90,9 +100,23 @@ export default function WatchPage() {
                 <p className="text-gray-500 text-sm mt-1">{stream.creator.displayName ?? stream.creator.username}</p>
                 {stream.description && <p className="text-gray-400 text-sm mt-2">{stream.description}</p>}
               </div>
-              {user?.id !== stream.creatorId && stream.creator.stripeOnboarded && (
-                <TipJar streamId={stream.id} creatorId={stream.creatorId} />
-              )}
+              <div className="flex items-center gap-2">
+                {user?.id !== stream.creatorId && stream.creator.stripeOnboarded && (
+                  <TipJar streamId={stream.id} creatorId={stream.creatorId} />
+                )}
+                <button
+                  onClick={() => setShowDirectPay(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-green-700 hover:bg-green-600 text-white text-xs rounded-full transition"
+                >
+                  <DollarSign size={12} /> Send Direct
+                </button>
+                <button
+                  onClick={() => setShowShare(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-xs rounded-full transition"
+                >
+                  <Share2 size={12} /> Share
+                </button>
+              </div>
             </div>
           </div>
           <DirectPayPanel creatorUsername={stream.creator.username} />
@@ -107,6 +131,22 @@ export default function WatchPage() {
           creatorId={stream.creatorId}
           onUnlocked={() => { setHasAccess(true); setPaywallOpen(false); }}
           onClose={() => setPaywallOpen(false)}
+        />
+      )}
+      {showDirectPay && (
+        <DirectPaySheet
+          creatorId={stream.creatorId}
+          creatorName={stream.creator.displayName ?? stream.creator.username}
+          apiUrl={API_URL}
+          onClose={() => setShowDirectPay(false)}
+        />
+      )}
+      {showShare && (
+        <ShareSheet
+          streamId={stream.id}
+          title={stream.title}
+          isLive={stream.status === 'live'}
+          onClose={() => setShowShare(false)}
         />
       )}
     </div>

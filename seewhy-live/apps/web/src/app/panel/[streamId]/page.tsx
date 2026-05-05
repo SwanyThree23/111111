@@ -4,8 +4,12 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuth } from '@/store/auth';
 import { useParams } from 'next/navigation';
-import { Mic, MicOff, Video, VideoOff, Monitor, UserX, VolumeX, ExternalLink, Copy } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, Monitor, UserX, ExternalLink, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
+import PollCreator from '@/components/polls/PollCreator';
+import ShareSheet from '@/components/social/ShareSheet';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.seewhylive.online';
 
 type GridSize = 4 | 9 | 12 | 16;
 interface Guest {
@@ -22,6 +26,7 @@ export default function PanelPage() {
   const [inviteUrl, setInviteUrl] = useState('');
   const [isMuted, setIsMuted] = useState(false);
   const [isCamOn, setIsCamOn] = useState(true);
+  const [showShare, setShowShare] = useState(false);
   const localVideoRef = useRef<HTMLVideoElement>(null);
 
   const { data: stream } = useQuery({
@@ -71,7 +76,11 @@ export default function PanelPage() {
             <button key={g} onClick={() => setGridSize(g)} className={`px-2 py-1 text-xs rounded ${gridSize === g ? 'bg-[#C8FF00] text-[#0C0806] font-bold' : 'text-gray-500 hover:text-white'}`}>{g}</button>
           ))}
           {isHost && (
-            <button onClick={generateInvite} className="btn-volt py-1 px-3 text-xs ml-2">+ Invite</button>
+            <>
+              <button onClick={generateInvite} className="btn-volt py-1 px-3 text-xs ml-2">+ Invite</button>
+              <PollCreator streamId={streamId} apiUrl={API_URL} onLaunched={() => toast.success('Poll launched!')} />
+              <button onClick={() => setShowShare(true)} className="btn-ghost py-1 px-3 text-xs">Share</button>
+            </>
           )}
         </div>
       </div>
@@ -134,6 +143,15 @@ export default function PanelPage() {
           <Monitor size={18} className="text-[#00E5CC]" />
         </button>
       </div>
+
+      {showShare && stream && (
+        <ShareSheet
+          streamId={stream.id}
+          title={stream.title}
+          isLive={stream.status === 'live'}
+          onClose={() => setShowShare(false)}
+        />
+      )}
 
       {/* Invite modal */}
       {inviteOpen && (

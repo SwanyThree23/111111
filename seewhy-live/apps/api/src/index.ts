@@ -15,10 +15,14 @@ import overlayRoutes from './routes/overlays.js';
 import vstRoutes from './routes/vst.js';
 import battleRoutes from './routes/battles.js';
 import analyticsRoutes from './routes/analytics.js';
+import pollRoutes from './routes/polls.js';
+import webhookRoutes from './routes/webhooks.js';
+import directPayRoutes from './routes/directpay.js';
 import { createWorkerPool, gracefulShutdown } from './services/mediasoup.js';
 import { prisma } from './services/db.js';
 import redis from './services/redis.js';
 import logger from './services/logger.js';
+import { setIO } from './services/socket.js';
 
 const app = express();
 const httpServer = createServer(app);
@@ -26,6 +30,7 @@ const httpServer = createServer(app);
 const io = new SocketServer(httpServer, {
   cors: { origin: process.env.CORS_ORIGINS?.split(',') ?? ['http://localhost:3000'], credentials: true },
 });
+setIO(io);
 
 // Security headers
 app.use(helmet({
@@ -60,6 +65,9 @@ app.use('/api/overlays', overlayRoutes);
 app.use('/api/vst', vstRoutes);
 app.use('/api/battles', battleRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/polls', pollRoutes);
+app.use('/api/webhooks', webhookRoutes);
+app.use('/api/directpay', directPayRoutes);
 
 // Health checks
 app.get('/health', (_, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
