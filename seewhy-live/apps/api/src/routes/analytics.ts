@@ -69,6 +69,37 @@ router.get('/dashboard', authenticate, async (req: AuthRequest, res: Response) =
   return res.json({ totalStreams, liveStreams, totalEarnings: totalEarnings._sum.creatorAmount ?? 0, totalMessages });
 });
 
+// Recent streams with aggregated stats
+router.get('/streams', authenticate, async (req: AuthRequest, res: Response) => {
+  const streams = await prisma.stream.findMany({
+    where: { creatorId: req.user!.id },
+    orderBy: { createdAt: 'desc' },
+    take: 20,
+    include: {
+      _count: { select: { chatMessages: true, guests: true } },
+    },
+  });
+
+  const streamIds = streams.map((s) => s.id);
+  const earnings = await prisma.transaction.groupBy({
+    by: ['streamId'],
+    where: { streamId: { in: streamIds }, status: 'succeeded' },
+    _sum: { creatorAmount: true, grossAmount: true },
+    _count: true,
+  });
+
+  const earningsMap = Object.fromEntries(
+    earnings.map((e) => [e.streamId, { creator: Number(e._sum.creatorAmount ?? 0), gross: Number(e._sum.grossAmount ?? 0), txCount: e._count }])
+  );
+
+  const result = streams.map((s) => ({
+    ...s,
+    earnings: earningsMap[s.id] ?? { creator: 0, gross: 0, txCount: 0 },
+  }));
+
+  return res.json(result);
+});
+
 // Chat moderation events for the authenticated creator's streams
 router.get('/moderation', authenticate, async (req: AuthRequest, res: Response) => {
   const { action } = req.query as { action?: string };
