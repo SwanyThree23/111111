@@ -88,7 +88,16 @@ router.post('/:streamId/invite', authenticate, async (req: AuthRequest, res: Res
   const room = stream.vdoRoom ?? `seewhy-${stream.id.slice(0, 8)}`;
   const inviteUrl = buildGuestInviteUrl(room, guestStreamId, req.body.displayName);
 
-  return res.json({ inviteUrl, guestStreamId, room });
+  // Create a pending slot so the panel can show a VDO.Ninja view frame immediately
+  const guest = await prisma.streamGuest.create({
+    data: {
+      streamId: stream.id,
+      displayName: req.body.displayName ?? 'Guest',
+      vdoStreamId: guestStreamId,
+    },
+  });
+
+  return res.json({ inviteUrl, guestStreamId, room, guestId: guest.id });
 });
 
 router.post('/:streamId/kick/:userId', authenticate, async (req: AuthRequest, res: Response) => {

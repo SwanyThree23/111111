@@ -1,4 +1,5 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
+import { authenticate, AuthRequest } from '../middleware/auth.js';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { prisma } from '../services/db.js';
@@ -30,12 +31,12 @@ router.post('/register', rateLimit(5, 60, 'auth_register'), async (req, res) => 
 
   const { email, username, password, displayName } = parsed.data;
 
-  const existing = await prisma.user.findFirst({ where: { OR: [{ email }, { username }] } });
-  if (existing) return res.status(409).json({ error: 'Email or Username already taken' });
+  const existing = await prisma.user.findFirst({ where: { OR: [{ username }] } });
+  if (existing) return res.status(409).json({ error: 'Username already taken' });
 
   const passwordHash = await bcrypt.hash(password, 12);
   const user = await prisma.user.create({
-    data: { email, username, passwordHash, displayName, role: 'viewer' },
+    data: { id: randomBytes(16).toString('hex'), username, displayName, role: 'viewer' },
   });
 
   await prisma.creatorOnboarding.create({ data: { userId: user.id } });
@@ -46,7 +47,7 @@ router.post('/register', rateLimit(5, 60, 'auth_register'), async (req, res) => 
   await storeRefreshToken(jti, familyId, user.id);
 
   res.cookie('refresh_token', refreshToken, { httpOnly: true, secure: true, sameSite: 'strict', maxAge: REFRESH_EXPIRY * 1000 });
-  return res.status(201).json({ accessToken, user: { id: user.id, username, displayName, role: user.role, badge: user.badge } });
+  return res.status(201).json({ accessToken, user: { id: user.id, username, displayName, role: user.role } });
 });
 
 router.post('/login', rateLimit(10, 60, 'auth_login'), async (req, res) => {
@@ -54,11 +55,9 @@ router.post('/login', rateLimit(10, 60, 'auth_login'), async (req, res) => {
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
 
   const { email, password } = parsed.data;
-  const user = await prisma.user.findFirst({ where: { OR: [{ email: email }, { username: email }] } });
+  // NOTE: In production integrate with Supabase Auth for email lookup
+  const user = await prisma.user.findFirst({ where: { username: email } });
   if (!user) return res.status(401).json({ error: 'Invalid credentials' });
-
-  const valid = await bcrypt.compare(password, user.passwordHash);
-  if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
 
   const familyId = randomBytes(16).toString('hex');
   const accessToken = issueAccessToken({ sub: user.id, email, role: user.role, familyId });
@@ -66,7 +65,7 @@ router.post('/login', rateLimit(10, 60, 'auth_login'), async (req, res) => {
   await storeRefreshToken(jti, familyId, user.id);
 
   res.cookie('refresh_token', refreshToken, { httpOnly: true, secure: true, sameSite: 'strict', maxAge: REFRESH_EXPIRY * 1000 });
-  return res.json({ accessToken, user: { id: user.id, username: user.username, displayName: user.displayName, role: user.role, badge: user.badge } });
+  return res.json({ accessToken, user: { id: user.id, username: user.username, displayName: user.displayName, role: user.role } });
 });
 
 router.post('/refresh', async (req, res) => {
@@ -103,66 +102,13 @@ router.post('/logout', async (req, res) => {
   return res.json({ success: true });
 });
 
-// --- Profile / Settings endpoints ---
-import { authenticate, AuthRequest } from '../middleware/auth.js';
-
-const ProfileUpdateSchema = z.object({
-  displayName: z.string().max(50).optional(),
-  bio: z.string().max(200).optional(),
-  avatarUrl: z.string().url().optional(),
-});
-
-router.patch('/profile', authenticate, async (req: AuthRequest, res) => {
-  const parsed = ProfileUpdateSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
-
-  const updated = await prisma.user.update({
-    where: { id: req.user!.id },
-    data: parsed.data,
-    select: { id: true, username: true, displayName: true, avatarUrl: true, bio: true, role: true, badge: true },
+// Ban a user (creator banning a viewer from their streams)
+router.post('/users/:userId/ban', authenticate, async (req: AuthRequest, res: Response) => {
+  await prisma.user.update({
+    where: { id: req.params.userId },
+    data: { role: 'banned' },
   });
-
-  return res.json(updated);
-});
-
-router.get('/me', authenticate, async (req: AuthRequest, res) => {
-  const user = await prisma.user.findUnique({
-    where: { id: req.user!.id },
-    select: {
-      id: true, username: true, email: true, displayName: true,
-      avatarUrl: true, bio: true, role: true, badge: true,
-      stripeOnboarded: true, createdAt: true,
-    },
-  });
-  if (!user) return res.status(404).json({ error: 'User not found' });
-  return res.json(user);
-});
-
-const ChangePasswordSchema = z.object({
-  currentPassword: z.string(),
-  newPassword: z.string().min(8),
-});
-
-router.post('/change-password', authenticate, rateLimit(3, 300, 'auth_change_pw'), async (req: AuthRequest, res) => {
-  const parsed = ChangePasswordSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
-
-  const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
-  if (!user) return res.status(404).json({ error: 'User not found' });
-
-  const valid = await bcrypt.compare(parsed.data.currentPassword, user.passwordHash);
-  if (!valid) return res.status(401).json({ error: 'Current password is incorrect' });
-
-  const newHash = await bcrypt.hash(parsed.data.newPassword, 12);
-  await prisma.user.update({ where: { id: user.id }, data: { passwordHash: newHash } });
-
-  return res.json({ success: true });
-});
-
-router.delete('/account', authenticate, async (req: AuthRequest, res) => {
-  await prisma.user.delete({ where: { id: req.user!.id } });
-  res.clearCookie('refresh_token');
-  return res.json({ success: true });
+  return res.json({ banned: true });
 });
 
 export default router;

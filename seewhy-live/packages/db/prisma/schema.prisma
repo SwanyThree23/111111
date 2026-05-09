@@ -40,6 +40,10 @@ model User {
   fanoutDests        FanoutDestination[]
   vstTracks          VstTrack[]
   onboarding         CreatorOnboarding?
+  polls              Poll[]
+  pollVotes          PollVote[]
+  webhookEndpoints   WebhookEndpoint[]
+  directPayLinks     DirectPayLink[]
 
   @@map("users")
 }
@@ -78,6 +82,7 @@ model Stream {
   watchParties  WatchParty[]
   recordings    StreamRecording[]
   vstTracks     VstTrack[]
+  polls         Poll[]
 
   @@map("streams")
 }
@@ -371,4 +376,80 @@ model CreatorOnboarding {
   user User @relation(fields: [userId], references: [id])
 
   @@map("creator_onboarding")
+}
+
+model Poll {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  streamId  String   @map("stream_id") @db.Uuid
+  creatorId String   @map("creator_id") @db.Uuid
+  question  String
+  options   Json
+  status    String   @default("active")
+  durationSeconds Int @default(60) @map("duration_seconds")
+  endsAt    DateTime @map("ends_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  stream  Stream     @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  creator User       @relation(fields: [creatorId], references: [id])
+  votes   PollVote[]
+
+  @@map("polls")
+}
+
+model PollVote {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pollId    String   @map("poll_id") @db.Uuid
+  userId    String?  @map("user_id") @db.Uuid
+  optionIdx Int      @map("option_idx")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  poll Poll  @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id])
+
+  @@unique([pollId, userId])
+  @@map("poll_votes")
+}
+
+model WebhookEndpoint {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  creatorId String   @map("creator_id") @db.Uuid
+  url       String
+  secret    String
+  events    Json     @default("[\"stream.live\",\"stream.ended\",\"milestone.viewers\",\"poll.ended\"]")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  creator       User            @relation(fields: [creatorId], references: [id])
+  deliveries    WebhookDelivery[]
+
+  @@map("webhook_endpoints")
+}
+
+model WebhookDelivery {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  endpointId String   @map("endpoint_id") @db.Uuid
+  event      String
+  payload    Json
+  statusCode Int?     @map("status_code")
+  attempt    Int      @default(1)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  endpoint WebhookEndpoint @relation(fields: [endpointId], references: [id])
+
+  @@map("webhook_deliveries")
+}
+
+model DirectPayLink {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  creatorId String   @map("creator_id") @db.Uuid
+  platform  String
+  handle    String
+  url       String?
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  creator User @relation(fields: [creatorId], references: [id])
+
+  @@unique([creatorId, platform])
+  @@map("direct_pay_links")
 }

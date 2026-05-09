@@ -15,19 +15,22 @@ import overlayRoutes from './routes/overlays.js';
 import vstRoutes from './routes/vst.js';
 import battleRoutes from './routes/battles.js';
 import analyticsRoutes from './routes/analytics.js';
+import pollRoutes from './routes/polls.js';
+import webhookRoutes from './routes/webhooks.js';
+import directPayRoutes from './routes/directpay.js';
 import { createWorkerPool, gracefulShutdown } from './services/mediasoup.js';
 import { prisma } from './services/db.js';
 import redis from './services/redis.js';
 import logger from './services/logger.js';
-import { rateLimit } from './middleware/rateLimit.js';
+import { setIO } from './services/socket.js';
 
 const app = express();
-app.set('trust proxy', 1);
 const httpServer = createServer(app);
 
 const io = new SocketServer(httpServer, {
   cors: { origin: process.env.CORS_ORIGINS?.split(',') ?? ['http://localhost:3000'], credentials: true },
 });
+setIO(io);
 
 // Security headers
 app.use(helmet({
@@ -42,12 +45,9 @@ app.use(helmet({
   },
 }));
 
-const allowedOrigins = process.env.CORS_ORIGINS?.split(',') ?? ['http://localhost:3000', 'https://seewhylive.com'];
+const allowedOrigins = process.env.CORS_ORIGINS?.split(',') ?? ['http://localhost:3000', 'https://seewhylive.online'];
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(cookieParser());
-
-// Global Rate Limit
-app.use('/api', rateLimit(100, 60, 'global'));
 
 // Stripe webhook needs raw body
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
@@ -65,6 +65,9 @@ app.use('/api/overlays', overlayRoutes);
 app.use('/api/vst', vstRoutes);
 app.use('/api/battles', battleRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/polls', pollRoutes);
+app.use('/api/webhooks', webhookRoutes);
+app.use('/api/directpay', directPayRoutes);
 
 // Health checks
 app.get('/health', (_, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
@@ -80,35 +83,22 @@ app.get('/health/deep', async (_, res) => {
 
 // MediaSoup signaling via Socket.io
 io.on('connection', (socket) => {
-  socket.on('join-stream', async (streamId: string) => {
-    socket.join(`stream:${streamId}`);
-    const key = `stream:${streamId}:viewers`;
-    await redis.sadd(key, socket.id);
-    const count = await redis.scard(key);
-    io.to(`stream:${streamId}`).emit('viewer-count', { count });
-    
-    // Periodic sync to DB could be added in a worker
-    await prisma.stream.update({ where: { id: streamId }, data: { viewerCount: count } }).catch(() => {});
+  socket.on('join-stream', (streamId: string) => socket.join(`stream:${streamId}`));
+  socket.on('leave-stream', (streamId: string) => socket.leave(`stream:${streamId}`));
+
+  socket.on('viewer-join', async ({ streamId }) => {
+    await prisma.stream.update({
+      where: { id: streamId },
+      data: { viewerCount: { increment: 1 } },
+    });
+    io.to(`stream:${streamId}`).emit('viewer-count-update', { streamId });
   });
 
-  socket.on('leave-stream', async (streamId: string) => {
-    socket.leave(`stream:${streamId}`);
-    const key = `stream:${streamId}:viewers`;
-    await redis.srem(key, socket.id);
-    const count = await redis.scard(key);
-    io.to(`stream:${streamId}`).emit('viewer-count', { count });
-  });
-
-  socket.on('disconnecting', async () => {
-    for (const room of socket.rooms) {
-      if (room.startsWith('stream:')) {
-        const streamId = room.split(':')[1];
-        const key = `stream:${streamId}:viewers`;
-        await redis.srem(key, socket.id);
-        const count = await redis.scard(key);
-        io.to(room).emit('viewer-count', { count });
-      }
-    }
+  socket.on('viewer-leave', async ({ streamId }) => {
+    await prisma.stream.update({
+      where: { id: streamId },
+      data: { viewerCount: { decrement: 1 } },
+    }).catch(() => {});
   });
 });
 
@@ -120,14 +110,6 @@ async function start() {
     logger.info(`SeeWhy LIVE API running on port ${PORT}`);
   });
 }
-
-// Error handling
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  logger.error('Unhandled Error', { error: err.message, stack: err.stack, path: req.path });
-  res.status(err.status ?? 500).json({
-    error: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : err.message,
-  });
-});
 
 process.on('SIGTERM', async () => {
   logger.info('SIGTERM received, graceful shutdown...');

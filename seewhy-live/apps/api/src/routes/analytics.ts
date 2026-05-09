@@ -25,7 +25,8 @@ router.get('/earnings', authenticate, async (req: AuthRequest, res: Response) =>
     }),
   ]);
 
-  const totals = transactions.reduce((acc: { gross: number; creator: number; platform: number }, t: any) => ({
+  type TxRow = { grossAmount: unknown; creatorAmount: unknown; platformAmount: unknown };
+  const totals = transactions.reduce((acc: { gross: number; creator: number; platform: number }, t: TxRow) => ({
     gross: acc.gross + Number(t.grossAmount),
     creator: acc.creator + Number(t.creatorAmount),
     platform: acc.platform + Number(t.platformAmount),
@@ -68,45 +69,62 @@ router.get('/dashboard', authenticate, async (req: AuthRequest, res: Response) =
   return res.json({ totalStreams, liveStreams, totalEarnings: totalEarnings._sum.creatorAmount ?? 0, totalMessages });
 });
 
-// --- Public leaderboard ---
-router.get('/leaderboard', async (_req, res: Response) => {
-  const topCreators = await prisma.transaction.groupBy({
-    by: ['creatorId'],
-    where: { status: 'succeeded' },
-    _sum: { creatorAmount: true },
+// Recent streams with aggregated stats
+router.get('/streams', authenticate, async (req: AuthRequest, res: Response) => {
+  const streams = await prisma.stream.findMany({
+    where: { creatorId: req.user!.id },
+    orderBy: { createdAt: 'desc' },
+    take: 20,
+    include: {
+      _count: { select: { chatMessages: true, guests: true } },
+    },
+  });
+
+  const streamIds = streams.map((s) => s.id);
+  const earnings = await prisma.transaction.groupBy({
+    by: ['streamId'],
+    where: { streamId: { in: streamIds }, status: 'succeeded' },
+    _sum: { creatorAmount: true, grossAmount: true },
     _count: true,
-    orderBy: { _sum: { creatorAmount: 'desc' } },
-    take: 10,
   });
 
-  const creatorIds = topCreators.map((t) => t.creatorId);
-  const users = await prisma.user.findMany({
-    where: { id: { in: creatorIds } },
-    select: { id: true, username: true, displayName: true, avatarUrl: true, badge: true },
-  });
+  const earningsMap = Object.fromEntries(
+    earnings.map((e) => [e.streamId, { creator: Number(e._sum.creatorAmount ?? 0), gross: Number(e._sum.grossAmount ?? 0), txCount: e._count }])
+  );
 
-  const userMap = new Map(users.map((u) => [u.id, u]));
-
-  const leaderboard = topCreators.map((entry) => ({
-    user: userMap.get(entry.creatorId) ?? null,
-    totalEarnings: Number(entry._sum.creatorAmount ?? 0),
-    transactionCount: entry._count,
+  const result = streams.map((s) => ({
+    ...s,
+    earnings: earningsMap[s.id] ?? { creator: 0, gross: 0, txCount: 0 },
   }));
 
-  return res.json({ leaderboard });
+  return res.json(result);
 });
 
-// --- Platform viewer stats ---
-router.get('/viewer-stats', async (_req, res: Response) => {
-  const [liveStreams, totalViewers] = await Promise.all([
-    prisma.stream.count({ where: { status: 'live' } }),
-    prisma.stream.aggregate({ where: { status: 'live' }, _sum: { viewerCount: true } }),
-  ]);
+// Chat moderation events for the authenticated creator's streams
+router.get('/moderation', authenticate, async (req: AuthRequest, res: Response) => {
+  const { action } = req.query as { action?: string };
 
-  return res.json({
-    liveStreams,
-    totalViewers: totalViewers._sum.viewerCount ?? 0,
+  const events = await prisma.guardianEvent.findMany({
+    where: {
+      ...(action ? { action } : { action: { in: ['warn', 'hide', 'ban'] } }),
+      message: { stream: { creatorId: req.user!.id } },
+    },
+    include: {
+      message: {
+        select: {
+          id: true,
+          content: true,
+          userId: true,
+          isDeleted: true,
+          user: { select: { username: true, displayName: true } },
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 200,
   });
+
+  return res.json(events);
 });
 
 export default router;

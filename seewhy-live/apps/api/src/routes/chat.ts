@@ -65,4 +65,17 @@ router.delete('/:streamId/messages/:messageId', authenticate, async (req: AuthRe
   return res.json({ deleted: true });
 });
 
+// Restore a hidden message (creator only)
+router.patch('/:messageId/restore', authenticate, async (req: AuthRequest, res: Response) => {
+  const message = await prisma.chatMessage.findUnique({
+    where: { id: req.params.messageId },
+    include: { stream: true },
+  });
+  if (!message) return res.status(404).json({ error: 'Not found' });
+  if (message.stream.creatorId !== req.user!.id) return res.status(403).json({ error: 'Forbidden' });
+
+  await prisma.chatMessage.update({ where: { id: req.params.messageId }, data: { isDeleted: false } });
+  return res.json({ restored: true });
+});
+
 export default router;
