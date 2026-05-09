@@ -1,0 +1,17 @@
+{
+  "name": "seewhy-live",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "prepare": "npm run db:generate",
+    "dev:api": "npm run dev -w @seewhy/api",
+    "dev:web": "npm run dev -w @seewhy/web",
+    "build": "npm run db:generate && npm run build:api && npm run build:web",
+    "build:api": "npm run build -w @seewhy/api",
+    "build:web": "npm run build -w @seewhy/web",
+    "db:generate": "prisma generate --schema=packages/db/prisma/schema.prisma",
+    "db:migrate": "npm run migrate -w @seewhy/db",
+    "db:studio": "npm run studio -w @seewhy/db"
+  }
+}

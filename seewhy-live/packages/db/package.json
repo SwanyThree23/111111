@@ -1,0 +1,16 @@
+{
+  "name": "@seewhy/db",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "generate": "prisma generate",
+    "migrate": "prisma migrate deploy",
+    "studio": "prisma studio"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.9.0"
+  },
+  "devDependencies": {
+    "prisma": "^5.9.0"
+  }
+}

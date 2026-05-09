@@ -1,0 +1,452 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  username          String   @unique
+  displayName       String?  @map("display_name")
+  avatarUrl         String?  @map("avatar_url")
+  bio               String?
+  stripeAccountId   String?  @map("stripe_account_id")
+  stripeOnboarded   Boolean  @default(false) @map("stripe_onboarded")
+  role              String   @default("viewer")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  streams            Stream[]           @relation("CreatorStreams")
+  transactions       Transaction[]      @relation("PayerTransactions")
+  createdTransactions Transaction[]     @relation("CreatorTransactions")
+  subscriptions      Subscription[]     @relation("SubscriberSubs")
+  creatorSubs        Subscription[]     @relation("CreatorSubs")
+  streamGuests       StreamGuest[]
+  chatMessages       ChatMessage[]
+  vods               Vod[]
+  aiJobs             AiRepurposeJob[]
+  guardianEvents     GuardianEvent[]    @relation("GuardianUser")
+  battlesA           SpotlightBattle[]  @relation("CreatorA")
+  battlesB           SpotlightBattle[]  @relation("CreatorB")
+  battlesWon         SpotlightBattle[]  @relation("Winner")
+  battleBoosts       BattleBoost[]      @relation("Booster")
+  boostedBattles     BattleBoost[]      @relation("TargetCreator")
+  watchParties       WatchParty[]
+  fanoutDests        FanoutDestination[]
+  vstTracks          VstTrack[]
+  onboarding         CreatorOnboarding?
+  polls              Poll[]
+  pollVotes          PollVote[]
+  webhookEndpoints   WebhookEndpoint[]
+  directPayLinks     DirectPayLink[]
+
+  @@map("users")
+}
+
+model Stream {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  creatorId         String   @map("creator_id") @db.Uuid
+  title             String
+  description       String?
+  category          String
+  thumbnailUrl      String?  @map("thumbnail_url")
+  streamKey         String   @unique @map("stream_key")
+  rtmpUrl           String   @default("rtmp://live.seewhy.live/app") @map("rtmp_url")
+  playbackUrl       String?  @map("playback_url")
+  status            String   @default("idle")
+  viewerCount       Int      @default(0) @map("viewer_count")
+  peakViewerCount   Int      @default(0) @map("peak_viewer_count")
+  tipTotal          Decimal  @default(0.00) @map("tip_total") @db.Decimal(10, 2)
+  creatorShare      Decimal  @default(0.900) @map("creator_share") @db.Decimal(4, 3)
+  platformFee       Decimal  @default(0.100) @map("platform_fee") @db.Decimal(4, 3)
+  isPublic          Boolean  @default(true) @map("is_public")
+  previewSecs       Int      @default(120) @map("preview_secs")
+  vdoRoom           String?  @map("vdo_room")
+  mediasoupRouterId String?  @map("mediasoup_router_id")
+  startedAt         DateTime? @map("started_at")
+  endedAt           DateTime? @map("ended_at")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  creator       User            @relation("CreatorStreams", fields: [creatorId], references: [id], onDelete: Cascade)
+  transactions  Transaction[]
+  guests        StreamGuest[]
+  chatMessages  ChatMessage[]
+  vods          Vod[]
+  alerts        StreamAlert[]
+  battles       SpotlightBattle[]
+  watchParties  WatchParty[]
+  recordings    StreamRecording[]
+  vstTracks     VstTrack[]
+  polls         Poll[]
+
+  @@map("streams")
+}
+
+model Transaction {
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  streamId              String?  @map("stream_id") @db.Uuid
+  payerId               String?  @map("payer_id") @db.Uuid
+  creatorId             String   @map("creator_id") @db.Uuid
+  type                  String
+  grossAmount           Decimal  @map("gross_amount") @db.Decimal(10, 2)
+  creatorAmount         Decimal  @map("creator_amount") @db.Decimal(10, 2)
+  platformAmount        Decimal  @map("platform_amount") @db.Decimal(10, 2)
+  stripePaymentIntentId String?  @unique @map("stripe_payment_intent_id")
+  stripeChargeId        String?  @map("stripe_charge_id")
+  stripeTransferId      String?  @map("stripe_transfer_id")
+  status                String   @default("pending")
+  metadata              Json     @default("{}")
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  stream      Stream?       @relation(fields: [streamId], references: [id])
+  payer       User?         @relation("PayerTransactions", fields: [payerId], references: [id])
+  creator     User          @relation("CreatorTransactions", fields: [creatorId], references: [id])
+  boosts      BattleBoost[]
+  splitAlerts SplitAlert[]
+
+  @@map("transactions")
+}
+
+model Subscription {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  subscriberId         String   @map("subscriber_id") @db.Uuid
+  creatorId            String   @map("creator_id") @db.Uuid
+  tier                 String
+  amount               Decimal  @db.Decimal(6, 2)
+  stripeSubscriptionId String?  @unique @map("stripe_subscription_id")
+  status               String   @default("active")
+  startedAt            DateTime @default(now()) @map("started_at")
+  expiresAt            DateTime? @map("expires_at")
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  subscriber User @relation("SubscriberSubs", fields: [subscriberId], references: [id])
+  creator    User @relation("CreatorSubs", fields: [creatorId], references: [id])
+
+  @@map("subscriptions")
+}
+
+model StreamGuest {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  streamId           String   @map("stream_id") @db.Uuid
+  userId             String?  @map("user_id") @db.Uuid
+  vdoStreamId        String?  @map("vdo_stream_id")
+  mediasoupProducerId String? @map("mediasoup_producer_id")
+  displayName        String?  @map("display_name")
+  isHost             Boolean  @default(false) @map("is_host")
+  isSpeaking         Boolean  @default(false) @map("is_speaking")
+  isMuted            Boolean  @default(false) @map("is_muted")
+  joinedAt           DateTime @default(now()) @map("joined_at")
+  leftAt             DateTime? @map("left_at")
+
+  stream Stream @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  user   User?  @relation(fields: [userId], references: [id])
+
+  @@map("stream_guests")
+}
+
+model ChatMessage {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  streamId        String   @map("stream_id") @db.Uuid
+  userId          String?  @map("user_id") @db.Uuid
+  content         String
+  type            String   @default("message")
+  amount          Decimal? @db.Decimal(8, 2)
+  isDeleted       Boolean  @default(false) @map("is_deleted")
+  moderationScore Decimal? @map("moderation_score") @db.Decimal(3, 2)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  stream         Stream          @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  user           User?           @relation(fields: [userId], references: [id])
+  guardianEvents GuardianEvent[]
+
+  @@map("chat_messages")
+}
+
+model StreamCategory {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String   @unique
+  slug        String   @unique
+  icon        String?
+  streamCount Int      @default(0) @map("stream_count")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("stream_categories")
+}
+
+model Vod {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  streamId        String?  @map("stream_id") @db.Uuid
+  creatorId       String   @map("creator_id") @db.Uuid
+  title           String
+  storagePath     String   @map("storage_path")
+  playbackUrl     String?  @map("playback_url")
+  thumbnailUrl    String?  @map("thumbnail_url")
+  durationSeconds Int?     @map("duration_seconds")
+  fileSizeBytes   BigInt?  @map("file_size_bytes")
+  viewCount       Int      @default(0) @map("view_count")
+  isPublic        Boolean  @default(true) @map("is_public")
+  encryptionKeyId String?  @map("encryption_key_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  stream    Stream?          @relation(fields: [streamId], references: [id])
+  creator   User             @relation(fields: [creatorId], references: [id])
+  aiJobs    AiRepurposeJob[]
+
+  @@map("vods")
+}
+
+model AiRepurposeJob {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vodId     String   @map("vod_id") @db.Uuid
+  creatorId String   @map("creator_id") @db.Uuid
+  status    String   @default("queued")
+  output    Json?
+  modelUsed String   @default("claude-sonnet-4-20250514") @map("model_used")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  vod     Vod  @relation(fields: [vodId], references: [id])
+  creator User @relation(fields: [creatorId], references: [id])
+
+  @@map("ai_repurpose_jobs")
+}
+
+model StreamAlert {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  streamId    String   @map("stream_id") @db.Uuid
+  type        String
+  userId      String?  @map("user_id") @db.Uuid
+  amount      Decimal? @db.Decimal(8, 2)
+  message     String?
+  overlayHtml String?  @map("overlay_html")
+  displayedAt DateTime? @map("displayed_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  stream Stream @relation(fields: [streamId], references: [id])
+
+  @@map("stream_alerts")
+}
+
+model SpotlightBattle {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  streamId        String   @map("stream_id") @db.Uuid
+  creatorAId      String   @map("creator_a_id") @db.Uuid
+  creatorBId      String   @map("creator_b_id") @db.Uuid
+  scoreA          Decimal  @default(0.00) @map("score_a") @db.Decimal(12, 2)
+  scoreB          Decimal  @default(0.00) @map("score_b") @db.Decimal(12, 2)
+  durationSeconds Int      @map("duration_seconds")
+  status          String   @default("active")
+  winnerId        String?  @map("winner_id") @db.Uuid
+  startedAt       DateTime @default(now()) @map("started_at")
+  endedAt         DateTime? @map("ended_at")
+
+  stream   Stream        @relation(fields: [streamId], references: [id])
+  creatorA User          @relation("CreatorA", fields: [creatorAId], references: [id])
+  creatorB User          @relation("CreatorB", fields: [creatorBId], references: [id])
+  winner   User?         @relation("Winner", fields: [winnerId], references: [id])
+  boosts   BattleBoost[]
+
+  @@map("spotlight_battles")
+}
+
+model BattleBoost {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  battleId        String   @map("battle_id") @db.Uuid
+  boosterId       String   @map("booster_id") @db.Uuid
+  targetCreatorId String   @map("target_creator_id") @db.Uuid
+  amount          Decimal  @db.Decimal(8, 2)
+  transactionId   String   @map("transaction_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  battle        SpotlightBattle @relation(fields: [battleId], references: [id])
+  booster       User            @relation("Booster", fields: [boosterId], references: [id])
+  targetCreator User            @relation("TargetCreator", fields: [targetCreatorId], references: [id])
+  transaction   Transaction     @relation(fields: [transactionId], references: [id])
+
+  @@map("battle_boosts")
+}
+
+model WatchParty {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  streamId         String   @map("stream_id") @db.Uuid
+  hostId           String   @map("host_id") @db.Uuid
+  syncOffsetMs     Int      @default(0) @map("sync_offset_ms")
+  participantCount Int      @default(0) @map("participant_count")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  stream Stream @relation(fields: [streamId], references: [id])
+  host   User   @relation(fields: [hostId], references: [id])
+
+  @@map("watch_parties")
+}
+
+model FanoutDestination {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  creatorId   String   @map("creator_id") @db.Uuid
+  platform    String
+  rtmpUrl     String   @map("rtmp_url")
+  streamKey   String   @map("stream_key")
+  isActive    Boolean  @default(true) @map("is_active")
+  displayName String?  @map("display_name")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  creator User @relation(fields: [creatorId], references: [id])
+
+  @@map("fanout_destinations")
+}
+
+model VstTrack {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  streamId    String   @map("stream_id") @db.Uuid
+  creatorId   String   @map("creator_id") @db.Uuid
+  name        String
+  mode        String
+  vdoStreamId String?  @map("vdo_stream_id")
+  faderLevel  Int      @default(80) @map("fader_level")
+  isMuted     Boolean  @default(false) @map("is_muted")
+  isActive    Boolean  @default(false) @map("is_active")
+  daw         String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  stream  Stream @relation(fields: [streamId], references: [id])
+  creator User   @relation(fields: [creatorId], references: [id])
+
+  @@map("vst_tracks")
+}
+
+model GuardianEvent {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  streamId    String   @map("stream_id") @db.Uuid
+  messageId   String?  @map("message_id") @db.Uuid
+  contentHash String?  @map("content_hash")
+  score       Decimal  @db.Decimal(3, 2)
+  action      String?
+  modelResponse Json?  @map("model_response")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  message ChatMessage? @relation(fields: [messageId], references: [id])
+  user    User?        @relation("GuardianUser", fields: [streamId], references: [id])
+
+  @@map("guardian_events")
+}
+
+model SplitAlert {
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  transactionId         String   @map("transaction_id") @db.Uuid
+  expectedCreatorAmount Decimal  @map("expected_creator_amount") @db.Decimal(10, 2)
+  actualCreatorAmount   Decimal  @map("actual_creator_amount") @db.Decimal(10, 2)
+  resolved              Boolean  @default(false)
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  transaction Transaction @relation(fields: [transactionId], references: [id])
+
+  @@map("split_alerts")
+}
+
+model StreamRecording {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  streamId        String   @map("stream_id") @db.Uuid
+  storagePath     String?  @map("storage_path")
+  durationSeconds Int?     @map("duration_seconds")
+  fileSizeBytes   BigInt?  @map("file_size_bytes")
+  status          String   @default("recording")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  stream Stream @relation(fields: [streamId], references: [id])
+
+  @@map("stream_recordings")
+}
+
+model CreatorOnboarding {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId              String   @unique @map("user_id") @db.Uuid
+  step                Int      @default(1)
+  profileComplete     Boolean  @default(false) @map("profile_complete")
+  stripeConnected     Boolean  @default(false) @map("stripe_connected")
+  streamKeyGenerated  Boolean  @default(false) @map("stream_key_generated")
+  firstStreamDone     Boolean  @default(false) @map("first_stream_done")
+  vstTested           Boolean  @default(false) @map("vst_tested")
+  completedAt         DateTime? @map("completed_at")
+  updatedAt           DateTime @default(now()) @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("creator_onboarding")
+}
+
+model Poll {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  streamId  String   @map("stream_id") @db.Uuid
+  creatorId String   @map("creator_id") @db.Uuid
+  question  String
+  options   Json
+  status    String   @default("active")
+  durationSeconds Int @default(60) @map("duration_seconds")
+  endsAt    DateTime @map("ends_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  stream  Stream     @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  creator User       @relation(fields: [creatorId], references: [id])
+  votes   PollVote[]
+
+  @@map("polls")
+}
+
+model PollVote {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pollId    String   @map("poll_id") @db.Uuid
+  userId    String?  @map("user_id") @db.Uuid
+  optionIdx Int      @map("option_idx")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  poll Poll  @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id])
+
+  @@unique([pollId, userId])
+  @@map("poll_votes")
+}
+
+model WebhookEndpoint {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  creatorId String   @map("creator_id") @db.Uuid
+  url       String
+  secret    String
+  events    Json     @default("[\"stream.live\",\"stream.ended\",\"milestone.viewers\",\"poll.ended\"]")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  creator       User            @relation(fields: [creatorId], references: [id])
+  deliveries    WebhookDelivery[]
+
+  @@map("webhook_endpoints")
+}
+
+model WebhookDelivery {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  endpointId String   @map("endpoint_id") @db.Uuid
+  event      String
+  payload    Json
+  statusCode Int?     @map("status_code")
+  attempt    Int      @default(1)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  endpoint WebhookEndpoint @relation(fields: [endpointId], references: [id])
+
+  @@map("webhook_deliveries")
+}
+
+model DirectPayLink {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  creatorId String   @map("creator_id") @db.Uuid
+  platform  String
+  handle    String
+  url       String?
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  creator User @relation(fields: [creatorId], references: [id])
+
+  @@unique([creatorId, platform])
+  @@map("direct_pay_links")
+}
