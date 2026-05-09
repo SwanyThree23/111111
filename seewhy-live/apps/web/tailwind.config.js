@@ -4,12 +4,12 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        volt: '#C8FF00',
-        gold: '#D4AF37',
-        'live-red': '#FF3B3B',
-        teal: '#00E5CC',
-        'ai-purple': '#A855F7',
-        'vst-orange': '#FF7A1A',
+        volt: 'var(--volt)',
+        gold: 'var(--gold)',
+        'live-red': 'var(--red)',
+        teal: 'var(--teal)',
+        'ai-purple': 'var(--purple)',
+        'vst-orange': 'var(--orange)',
       },
       fontFamily: {
         display: ['var(--font-bebas)'],

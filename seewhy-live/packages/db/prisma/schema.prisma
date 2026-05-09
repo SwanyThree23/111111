@@ -9,13 +9,16 @@ datasource db {
 
 model User {
   id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email             String   @unique
   username          String   @unique
+  passwordHash      String   @map("password_hash")
   displayName       String?  @map("display_name")
   avatarUrl         String?  @map("avatar_url")
   bio               String?
   stripeAccountId   String?  @map("stripe_account_id")
   stripeOnboarded   Boolean  @default(false) @map("stripe_onboarded")
   role              String   @default("viewer")
+  badge             String?  @map("badge")
   createdAt         DateTime @default(now()) @map("created_at")
 
   streams            Stream[]           @relation("CreatorStreams")
