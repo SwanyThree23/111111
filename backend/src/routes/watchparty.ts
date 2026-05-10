@@ -199,4 +199,52 @@ router.get('/rooms/:roomName/state', optionalAuth, async (req, res) => {
   }
 });
 
+// ─── Room Info (state + meta in one call) ─────────────────────────────────────
+
+router.get('/rooms/:roomName', optionalAuth, async (req, res) => {
+  try {
+    const [state] = await Promise.all([
+      getWatchPartyState(req.params.roomName),
+    ]);
+    // Meta is stored alongside state; fall back to defaults
+    const meta = (state as any)?.meta || {
+      name: req.params.roomName,
+      maxParticipants: 20,
+      accent: 'burgundy',
+      layout: 'auto',
+      isLocked: false,
+    };
+    res.json({ state, meta });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get room' });
+  }
+});
+
+// ─── Room Meta Update ─────────────────────────────────────────────────────────
+
+router.put('/rooms/:roomName/meta', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const schema = z.object({
+      name:            z.string().max(60).optional(),
+      maxParticipants: z.number().min(2).max(20).optional(),
+      accent:          z.enum(['burgundy', 'gold', 'teal', 'violet']).optional(),
+      layout:          z.enum(['auto', 'spotlight', 'cinema', 'split']).optional(),
+      isLocked:        z.boolean().optional(),
+    });
+    const data = schema.parse(req.body);
+
+    // Persist meta alongside watch state
+    const existing = await getWatchPartyState(req.params.roomName);
+    await saveWatchPartyState(req.params.roomName, {
+      ...(existing || { videoId: null, isPlaying: false, currentTime: 0, hostId: req.user!.id }),
+      meta: { ...((existing as any)?.meta || {}), ...data },
+    } as any);
+
+    res.json({ updated: true });
+  } catch (error) {
+    if (error instanceof z.ZodError) return res.status(400).json({ error: error.errors });
+    res.status(500).json({ error: 'Failed to update room meta' });
+  }
+});
+
 export default router;
