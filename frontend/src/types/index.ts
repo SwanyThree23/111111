@@ -1,5 +1,5 @@
 export interface User { id: string; email: string; username: string; firstName?: string; lastName?: string; avatar?: string; role: string; createdAt: string; }
-export interface Stream { id: string; userId: string; title: string; description?: string; streamKey: string; destinations: string[]; status: StreamStatus; isLive: boolean; scheduledAt?: string; startedAt?: string; endedAt?: string; createdAt: string; updatedAt: string; stats?: StreamStats[]; vdoRooms?: VdoRoom[]; chatMessages?: ChatMessage[]; }
+export interface Stream { id: string; userId: string; title: string; description?: string; streamKey: string; destinations: string[]; status: StreamStatus; isLive: boolean; paywallEnabled?: boolean; paywallPreviewSeconds?: number; scheduledAt?: string; startedAt?: string; endedAt?: string; createdAt: string; updatedAt: string; stats?: StreamStats[]; vdoRooms?: VdoRoom[]; chatMessages?: ChatMessage[]; }
 export type StreamStatus = 'IDLE' | 'STARTING' | 'LIVE' | 'STOPPING' | 'STOPPED' | 'ERROR';
 export interface StreamStats { id: string; streamId: string; viewers: number; bitrate: number; fps: number; resolution?: string; duration: number; timestamp: string; }
 export interface VdoRoom { id: string; streamId: string; roomName: string; password: string; directorUrl: string; guestUrl: string; createdAt: string; participants: VdoParticipant[]; }

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   DollarSign, Radio, Users, TrendingUp, Play, Tv2,
-  ExternalLink, ChevronRight, Zap,
+  ExternalLink, ChevronRight, Zap, Eye, Settings,
 } from 'lucide-react';
 import api from '@/utils/api';
 import { useAuth } from '@/utils/auth';
@@ -52,13 +52,15 @@ export default function Dashboard() {
         api.get('/streams'),
       ]);
       setStats(statsRes.data);
-      setStreams((streamsRes.data.streams || []).slice(0, 5));
+      setStreams(streamsRes.data.streams || []);
     } catch {
       // silently handled by interceptor
     } finally {
       setLoading(false);
     }
   };
+
+  const liveNow = streams.filter((s) => s.isLive || s.status === 'LIVE');
 
   const creatorRevenue = stats?.totalRevenueCreator
     ?? Math.floor((stats?.totalTipsReceived || 0) * CREATOR_SHARE);
@@ -100,6 +102,84 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto">
+
+      {/* NOW LIVE banner */}
+      {liveNow.length > 0 && (
+        <div
+          className="relative rounded-2xl overflow-hidden border border-red-500/30"
+          style={{ background: 'linear-gradient(135deg, rgba(139,0,0,0.25) 0%, rgba(7,7,13,0.9) 60%, rgba(20,15,5,0.9) 100%)' }}
+        >
+          {/* animated glow edge */}
+          <div className="absolute inset-0 pointer-events-none rounded-2xl"
+            style={{ boxShadow: '0 0 40px rgba(220,38,38,0.15) inset' }} />
+
+          <div className="relative px-6 py-5 flex flex-col sm:flex-row items-start sm:items-center gap-5">
+            {/* LEFT — LIVE indicator */}
+            <div className="flex items-center gap-3 shrink-0">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500" />
+              </span>
+              <span className="font-display text-2xl tracking-widest text-red-400">NOW LIVE</span>
+              {liveNow.length > 1 && (
+                <span className="ml-1 text-xs font-mono px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 border border-red-500/30">
+                  {liveNow.length} streams
+                </span>
+              )}
+            </div>
+
+            {/* CENTER — stream cards */}
+            <div className="flex-1 flex flex-wrap gap-3">
+              {liveNow.map((s) => {
+                const latestStat = s.stats?.[s.stats.length - 1];
+                const viewers = latestStat?.viewers ?? 0;
+                const isOwn = s.userId === user?.id;
+                return (
+                  <div
+                    key={s.id}
+                    className="flex items-center gap-3 bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 min-w-0"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-white font-medium text-sm truncate max-w-[180px]">{s.title}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <Eye className="w-3 h-3 text-white/40" />
+                        <span className="text-white/40 font-mono text-xs">{viewers} watching</span>
+                        {s.destinations?.length > 0 && (
+                          <span className="text-white/20 font-mono text-xs">
+                            · {s.destinations.length} dest.
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 ml-2 shrink-0">
+                      <Link
+                        to={`/streams/${s.id}`}
+                        className="text-xs font-mono px-2.5 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 transition flex items-center gap-1"
+                      >
+                        <Play className="w-3 h-3" /> Watch
+                      </Link>
+                      {isOwn && (
+                        <button
+                          onClick={() => navigate('/go-live')}
+                          className="text-xs font-mono px-2.5 py-1 rounded-lg bg-white/8 hover:bg-white/15 text-white/60 border border-white/10 transition flex items-center gap-1"
+                        >
+                          <Settings className="w-3 h-3" /> Manage
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* RIGHT — dismiss hint */}
+            <p className="text-white/20 text-xs font-mono shrink-0 hidden lg:block">
+              {liveNow.length === 1 ? '1 active stream' : `${liveNow.length} active streams`}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
@@ -216,7 +296,7 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {streams.map((s) => (
+                {streams.slice(0, 5).map((s) => (
                   <tr key={s.id} className="hover:bg-white/3 transition group">
                     <td className="px-6 py-4 font-medium text-white">{s.title}</td>
                     <td className="px-6 py-4">
