@@ -1,148 +1,152 @@
 import { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Home, Video, BarChart3, Settings, LogOut, Menu, X,
-  Users, Radio, Tv2, ExternalLink,
+  LayoutDashboard, Video, BarChart3, Settings, LogOut,
+  Menu, ChevronLeft, Radio, Tv2, Wifi, WifiOff,
 } from 'lucide-react';
 import { useAuth } from '@/utils/auth';
+import { useWebSocket } from '@/hooks/useWebSocket';
 
-const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: Home },
+const NAV = [
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Streams', href: '/streams', icon: Video },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
-const quickActions = [
-  { name: 'Go Live', href: '/go-live', icon: Radio, external: true },
-  { name: 'Watch Party', href: '/watch-party/new', icon: Tv2, external: true },
-];
-
-const FANBASE_CHANNELS = [
-  { name: 'Memoirs of a Shy Girl', url: 'https://fanbase.app.link/aFLSLHFDe2b' },
-  { name: 'AIVerse', url: 'https://fanbase.app.link/nR0eOqEDe2b' },
-];
-
 export default function Layout() {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { isConnected } = useWebSocket();
 
-  const handleQuickAction = (href: string) => {
-    if (href === '/watch-party/new') {
-      // Create a new watch party room
-      const roomName = `party-${Date.now()}`;
-      navigate(`/watch-party/${roomName}`);
-    } else {
-      navigate(href);
-    }
-  };
+  const handleGoLive = () => navigate('/go-live');
+  const handleWatchParty = () => navigate(`/watch-party/party-${Date.now()}`);
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
+    <div className="min-h-screen flex bg-obsidian">
       {/* Sidebar */}
       <aside
-        className={`${
-          sidebarOpen ? 'w-64' : 'w-20'
-        } bg-gradient-to-b from-purple-900 via-indigo-900 to-blue-900 text-white transition-all duration-300 flex flex-col fixed h-full z-50`}
+        className={`${collapsed ? 'w-[72px]' : 'w-64'} flex-shrink-0 bg-obsidian-50 border-r border-white/8
+                    flex flex-col fixed h-full z-40 transition-all duration-300`}
       >
-        {/* Header */}
-        <div className="p-6 flex items-center justify-between border-b border-white/10">
-          {sidebarOpen && (
-            <h1 className="text-xl font-bold text-white">SwanyThree</h1>
+        {/* Brand */}
+        <div className={`flex items-center border-b border-white/8 h-16 ${collapsed ? 'justify-center px-4' : 'px-5 gap-3'}`}>
+          {!collapsed && (
+            <div className="flex-1 min-w-0">
+              <span className="font-display text-gold text-2xl tracking-widest">SEEWHY</span>
+              <span className="font-display text-white/60 text-2xl tracking-widest"> LIVE</span>
+            </div>
+          )}
+          {collapsed && (
+            <div className="w-8 h-8 bg-burgundy rounded-lg flex items-center justify-center">
+              <Radio className="w-4 h-4 text-white" />
+            </div>
           )}
           <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 hover:bg-white/10 rounded-lg transition ml-auto"
+            onClick={() => setCollapsed(!collapsed)}
+            className="p-1.5 hover:bg-white/10 rounded-lg transition text-white/40 hover:text-white"
           >
-            {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {collapsed ? <Menu className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </button>
         </div>
 
         {/* Quick Actions */}
-        <div className="p-4 space-y-1 border-b border-white/10">
-          {sidebarOpen && <p className="text-xs text-white/40 font-medium mb-2">QUICK ACTIONS</p>}
-          {quickActions.map((action) => (
-            <button
-              key={action.name}
-              onClick={() => handleQuickAction(action.href)}
-              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg bg-white/10 hover:bg-white/20 transition"
-            >
-              <action.icon className="w-5 h-5 text-pink-300" />
-              {sidebarOpen && <span className="font-semibold text-sm text-white">{action.name}</span>}
-            </button>
-          ))}
+        <div className={`p-3 border-b border-white/8 space-y-2`}>
+          {!collapsed && (
+            <p className="text-[10px] font-mono text-white/30 uppercase tracking-widest px-2 mb-2">
+              Broadcast
+            </p>
+          )}
+          <button
+            onClick={handleGoLive}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-burgundy hover:bg-burgundy-dark
+                       transition text-white font-semibold text-sm ${collapsed ? 'justify-center' : ''}`}
+            title="Go Live"
+          >
+            <Radio className="w-4 h-4 flex-shrink-0" />
+            {!collapsed && <span>Go Live</span>}
+            {!collapsed && (
+              <span className="ml-auto">
+                <span className="live-dot" />
+              </span>
+            )}
+          </button>
+          <button
+            onClick={handleWatchParty}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/5 hover:bg-white/10
+                       border border-white/10 transition text-white/70 hover:text-white font-medium text-sm
+                       ${collapsed ? 'justify-center' : ''}`}
+            title="Watch Party"
+          >
+            <Tv2 className="w-4 h-4 flex-shrink-0" />
+            {!collapsed && <span>Watch Party</span>}
+          </button>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-1">
-          {sidebarOpen && <p className="text-xs text-white/40 font-medium mb-2">NAVIGATION</p>}
-          {navigation.map((item) => {
-            const isActive = location.pathname === item.href;
+        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+          {!collapsed && (
+            <p className="text-[10px] font-mono text-white/30 uppercase tracking-widest px-2 mb-2">
+              Navigate
+            </p>
+          )}
+          {NAV.map((item) => {
+            const active = location.pathname === item.href || location.pathname.startsWith(item.href + '/');
             return (
               <Link
                 key={item.name}
                 to={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition ${
-                  isActive
-                    ? 'bg-white/20 text-white'
-                    : 'text-white/70 hover:bg-white/10 hover:text-white'
-                }`}
+                title={item.name}
+                className={`${active ? 'nav-link-active' : 'nav-link'} ${collapsed ? 'justify-center px-3' : ''}`}
               >
-                <item.icon className="w-5 h-5" />
-                {sidebarOpen && <span className="font-medium">{item.name}</span>}
+                <item.icon className="w-5 h-5 flex-shrink-0" />
+                {!collapsed && <span>{item.name}</span>}
               </Link>
             );
           })}
         </nav>
 
-        {/* Fanbase Links */}
-        {sidebarOpen && (
-          <div className="p-4 border-t border-white/10">
-            <p className="text-xs text-white/40 font-medium mb-2">FANBASE NETWORK</p>
-            {FANBASE_CHANNELS.map(ch => (
-              <a
-                key={ch.name}
-                href={ch.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-xs text-white/60 hover:text-white py-1.5 transition"
-              >
-                <ExternalLink className="w-3 h-3" />
-                {ch.name}
-              </a>
-            ))}
+        {/* Connection status */}
+        {!collapsed && (
+          <div className="px-4 py-2 flex items-center gap-2 text-xs font-mono text-white/30">
+            {isConnected ? (
+              <><Wifi className="w-3 h-3 text-green-500" /> Live updates active</>
+            ) : (
+              <><WifiOff className="w-3 h-3 text-red-500/60" /> Disconnected</>
+            )}
           </div>
         )}
 
         {/* User section */}
-        <div className="p-4 border-t border-white/10">
-          <div className={`flex items-center ${sidebarOpen ? 'gap-3' : 'justify-center'} mb-3`}>
-            <div className="w-10 h-10 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
-              {user?.username?.[0]?.toUpperCase() || 'U'}
+        <div className="p-3 border-t border-white/8">
+          <div className={`flex items-center gap-3 mb-3 ${collapsed ? 'justify-center' : ''}`}>
+            <div className="w-9 h-9 bg-gradient-to-br from-burgundy to-gold/60 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+              {user?.username?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'S'}
             </div>
-            {sidebarOpen && (
+            {!collapsed && (
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{user?.username}</p>
-                <p className="text-xs text-white/60 truncate">{user?.email}</p>
+                <p className="text-sm font-semibold text-white truncate">{user?.username || 'Creator'}</p>
+                <p className="text-xs text-white/40 font-mono truncate">{user?.email}</p>
               </div>
             )}
           </div>
           <button
-            onClick={logout}
-            className={`w-full flex items-center ${
-              sidebarOpen ? 'gap-3' : 'justify-center'
-            } px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-300 rounded-lg transition`}
+            onClick={() => logout()}
+            title="Logout"
+            className={`w-full flex items-center gap-3 px-3 py-2 bg-white/5 hover:bg-red-900/30
+                       text-white/50 hover:text-red-400 rounded-xl transition text-sm font-medium
+                       ${collapsed ? 'justify-center' : ''}`}
           >
-            <LogOut className="w-5 h-5" />
-            {sidebarOpen && <span className="font-medium">Logout</span>}
+            <LogOut className="w-4 h-4 flex-shrink-0" />
+            {!collapsed && <span>Logout</span>}
           </button>
         </div>
       </aside>
 
-      {/* Main content */}
-      <div className={`flex-1 ${sidebarOpen ? 'ml-64' : 'ml-20'} transition-all duration-300`}>
+      {/* Main */}
+      <div className={`flex-1 ${collapsed ? 'ml-[72px]' : 'ml-64'} transition-all duration-300 min-h-screen`}>
         <main className="p-8">
           <Outlet />
         </main>

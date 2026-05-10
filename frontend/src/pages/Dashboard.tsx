@@ -1,135 +1,238 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { TrendingUp, Radio, Users, MessageSquare, Plus, ExternalLink } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import {
+  DollarSign, Radio, Users, TrendingUp, Play, Tv2,
+  ExternalLink, ChevronRight, Zap,
+} from 'lucide-react';
 import api from '@/utils/api';
-import toast from 'react-hot-toast';
+import { useAuth } from '@/utils/auth';
+import { useWebSocket } from '@/hooks/useWebSocket';
 import { Stream } from '@/types';
+
+const CREATOR_SHARE = 0.90;
 
 interface DashboardStats {
   totalStreams: number;
   liveStreams: number;
   avgViewers: number;
   totalChatMessages: number;
+  totalTipsReceived?: number;
+  totalRevenueCreator?: number;
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  LIVE: 'badge badge-success',
+const STATUS_BADGE: Record<string, string> = {
+  LIVE: 'badge badge-live',
   STARTING: 'badge badge-warning',
   STOPPING: 'badge badge-warning',
   STOPPED: 'badge badge-info',
   ERROR: 'badge badge-error',
-  IDLE: 'badge bg-gray-100 text-gray-600',
+  IDLE: 'badge bg-white/10 text-white/50',
 };
 
 export default function Dashboard() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [recentStreams, setRecentStreams] = useState<Stream[]>([]);
-  const [creating, setCreating] = useState(false);
+  const [streams, setStreams] = useState<Stream[]>([]);
+  const [liveViewers, setLiveViewers] = useState<number>(0);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const { lastMessage } = useWebSocket(undefined, {
+    onMessage: (msg) => {
+      if (msg.type === 'viewer_count') setLiveViewers(msg.data?.count ?? 0);
+    },
+  });
+
+  useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
     try {
-      const [analyticsRes, streamsRes] = await Promise.all([
+      const [statsRes, streamsRes] = await Promise.all([
         api.get('/analytics/dashboard'),
         api.get('/streams'),
       ]);
-      setStats(analyticsRes.data);
-      setRecentStreams(streamsRes.data.streams.slice(0, 5));
+      setStats(statsRes.data);
+      setStreams((streamsRes.data.streams || []).slice(0, 5));
     } catch {
-      // handled by interceptor
-    }
-  };
-
-  const createStream = async () => {
-    const title = prompt('Stream title:');
-    if (!title) return;
-    setCreating(true);
-    try {
-      await api.post('/streams', { title });
-      toast.success('Stream created!');
-      fetchData();
-    } catch {
-      // handled
+      // silently handled by interceptor
     } finally {
-      setCreating(false);
+      setLoading(false);
     }
   };
 
-  const statCards = stats
-    ? [
-        { label: 'Total Streams', value: stats.totalStreams, icon: Radio, color: 'text-purple-600', bg: 'bg-purple-50' },
-        { label: 'Live Now', value: stats.liveStreams, icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-50' },
-        { label: 'Avg Viewers', value: stats.avgViewers, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
-        { label: 'Chat Messages', value: stats.totalChatMessages, icon: MessageSquare, color: 'text-pink-600', bg: 'bg-pink-50' },
-      ]
-    : [];
+  const creatorRevenue = stats?.totalRevenueCreator
+    ?? Math.floor((stats?.totalTipsReceived || 0) * CREATOR_SHARE);
+
+  const statCards = [
+    {
+      label: 'Creator Revenue',
+      value: `$${(creatorRevenue / 100).toFixed(2)}`,
+      sub: '90% of all tips',
+      icon: DollarSign,
+      accent: 'text-gold',
+      bg: 'bg-gold/10 border-gold/20',
+    },
+    {
+      label: 'Live Viewers',
+      value: liveViewers || (stats?.liveStreams ?? 0),
+      sub: 'Right now',
+      icon: Users,
+      accent: 'text-green-400',
+      bg: 'bg-green-900/20 border-green-800/30',
+    },
+    {
+      label: 'Total Streams',
+      value: stats?.totalStreams ?? 0,
+      sub: `${stats?.liveStreams ?? 0} live now`,
+      icon: Radio,
+      accent: 'text-burgundy-light',
+      bg: 'bg-burgundy/10 border-burgundy/20',
+    },
+    {
+      label: 'Avg Viewers',
+      value: stats?.avgViewers ?? 0,
+      sub: 'Per stream',
+      icon: TrendingUp,
+      accent: 'text-blue-400',
+      bg: 'bg-blue-900/20 border-blue-800/30',
+    },
+  ];
 
   return (
-    <div className="p-6 space-y-8 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8 max-w-6xl mx-auto">
+      {/* Header */}
+      <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-500 text-sm mt-0.5">Your streaming overview</p>
+          <h1 className="font-display text-4xl tracking-wider text-white">
+            DASHBOARD
+          </h1>
+          <p className="text-white/40 font-mono text-sm mt-1">
+            Welcome back, <span className="text-gold">{user?.username || 'Creator'}</span>
+          </p>
         </div>
-        <button onClick={createStream} disabled={creating} className="btn-primary flex items-center gap-2 disabled:opacity-60">
-          <Plus className="w-4 h-4" />
-          Create Stream
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => navigate(`/watch-party/party-${Date.now()}`)}
+            className="btn-ghost flex items-center gap-2 text-sm"
+          >
+            <Tv2 className="w-4 h-4" /> Watch Party
+          </button>
+          <button
+            onClick={() => navigate('/go-live')}
+            className="btn-primary flex items-center gap-2 text-sm"
+          >
+            <Radio className="w-4 h-4" />
+            <span className="live-dot" />
+            Go Live
+          </button>
+        </div>
       </div>
 
+      {/* Stat cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {statCards.map((card) => (
-          <div key={card.label} className="card flex items-center gap-4">
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${card.bg}`}>
-              <card.icon className={`w-6 h-6 ${card.color}`} />
+        {loading
+          ? Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="card animate-pulse">
+                <div className="h-4 bg-white/10 rounded w-2/3 mb-3" />
+                <div className="h-8 bg-white/10 rounded w-1/2" />
+              </div>
+            ))
+          : statCards.map((c) => (
+              <div key={c.label} className={`card border ${c.bg}`}>
+                <div className="flex items-start justify-between mb-3">
+                  <p className="text-white/50 text-xs font-mono uppercase tracking-widest">{c.label}</p>
+                  <c.icon className={`w-4 h-4 ${c.accent}`} />
+                </div>
+                <p className={`text-3xl font-bold ${c.accent} font-mono`}>{c.value}</p>
+                <p className="text-white/30 text-xs font-mono mt-1">{c.sub}</p>
+              </div>
+            ))}
+      </div>
+
+      {/* Revenue breakdown */}
+      {!loading && stats && (
+        <div className="card bg-gradient-to-br from-obsidian-50 to-obsidian border-gold/10">
+          <div className="flex items-center gap-3 mb-4">
+            <Zap className="w-5 h-5 text-gold" />
+            <h2 className="font-display text-xl tracking-wider text-white">REVENUE SPLIT</h2>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="text-center p-4 bg-gold/5 border border-gold/10 rounded-xl">
+              <p className="text-gold font-display text-3xl tracking-wider">90%</p>
+              <p className="text-white/60 text-xs font-mono mt-1">Creator (you)</p>
+              <p className="text-gold font-mono font-bold mt-1">${(creatorRevenue / 100).toFixed(2)}</p>
             </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{card.value}</p>
-              <p className="text-sm text-gray-500">{card.label}</p>
+            <div className="text-center p-4 bg-white/5 border border-white/10 rounded-xl">
+              <p className="text-white/40 font-display text-3xl tracking-wider">10%</p>
+              <p className="text-white/40 text-xs font-mono mt-1">Platform fee</p>
+              <p className="text-white/40 font-mono font-bold mt-1">
+                ${(((stats.totalTipsReceived || 0) - creatorRevenue) / 100).toFixed(2)}
+              </p>
+            </div>
+            <div className="text-center p-4 bg-white/5 border border-white/10 rounded-xl">
+              <p className="text-white font-display text-3xl tracking-wider">LIVE</p>
+              <p className="text-white/40 text-xs font-mono mt-1">RTMP ingest</p>
+              <p className="text-white/60 font-mono font-bold mt-1 text-xs">rtmp://live.seewhy.live</p>
             </div>
           </div>
-        ))}
-        {!stats && (
-          <div className="col-span-4 text-center py-8 text-gray-400">Loading stats...</div>
-        )}
-      </div>
+        </div>
+      )}
 
+      {/* Recent streams */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Recent Streams</h2>
-          <Link to="/streams" className="text-sm text-purple-600 hover:underline">View all</Link>
+          <h2 className="font-display text-xl tracking-wider text-white">RECENT STREAMS</h2>
+          <Link to="/streams" className="text-gold hover:text-gold-light text-sm font-mono flex items-center gap-1">
+            View all <ChevronRight className="w-3 h-3" />
+          </Link>
         </div>
 
-        {recentStreams.length === 0 ? (
-          <div className="card text-center py-12 text-gray-400">
-            <Radio className="w-10 h-10 mx-auto mb-3 opacity-30" />
-            <p>No streams yet. Create your first one!</p>
+        {loading ? (
+          <div className="card animate-pulse space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-12 bg-white/5 rounded-xl" />
+            ))}
+          </div>
+        ) : streams.length === 0 ? (
+          <div className="card text-center py-16">
+            <Radio className="w-10 h-10 mx-auto mb-3 text-white/20" />
+            <p className="text-white/40 font-mono">No streams yet</p>
+            <button
+              onClick={() => navigate('/go-live')}
+              className="btn-primary mt-4 flex items-center gap-2 mx-auto"
+            >
+              <Play className="w-4 h-4" /> Start your first stream
+            </button>
           </div>
         ) : (
           <div className="card p-0 overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b">
+              <thead className="border-b border-white/8">
                 <tr>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Title</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Created</th>
-                  <th className="px-4 py-3" />
+                  <th className="text-left px-6 py-3 text-xs font-mono text-white/40 uppercase tracking-widest">Title</th>
+                  <th className="text-left px-6 py-3 text-xs font-mono text-white/40 uppercase tracking-widest">Status</th>
+                  <th className="text-left px-6 py-3 text-xs font-mono text-white/40 uppercase tracking-widest">Date</th>
+                  <th className="px-6 py-3" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
-                {recentStreams.map((s) => (
-                  <tr key={s.id} className="hover:bg-gray-50 transition">
-                    <td className="px-4 py-3 font-medium text-gray-900">{s.title}</td>
-                    <td className="px-4 py-3">
-                      <span className={STATUS_COLORS[s.status] || 'badge bg-gray-100'}>{s.status}</span>
+              <tbody className="divide-y divide-white/5">
+                {streams.map((s) => (
+                  <tr key={s.id} className="hover:bg-white/3 transition group">
+                    <td className="px-6 py-4 font-medium text-white">{s.title}</td>
+                    <td className="px-6 py-4">
+                      <span className={STATUS_BADGE[s.status] || 'badge bg-white/10 text-white/50'}>
+                        {s.status}
+                      </span>
                     </td>
-                    <td className="px-4 py-3 text-gray-500">{new Date(s.createdAt).toLocaleDateString()}</td>
-                    <td className="px-4 py-3">
-                      <Link to={`/streams/${s.id}`} className="text-purple-600 hover:underline flex items-center gap-1">
-                        <ExternalLink className="w-3 h-3" /> View
+                    <td className="px-6 py-4 text-white/40 font-mono text-xs">
+                      {new Date(s.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4">
+                      <Link
+                        to={`/streams/${s.id}`}
+                        className="text-gold/60 hover:text-gold transition flex items-center gap-1 text-xs font-mono"
+                      >
+                        View <ExternalLink className="w-3 h-3" />
                       </Link>
                     </td>
                   </tr>
