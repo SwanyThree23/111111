@@ -6,6 +6,9 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/utils/auth';
 import { useWebSocket } from '@/hooks/useWebSocket';
+import { useBreakpoint } from '@/hooks/useBreakpoint';
+import BottomTabBar from './BottomTabBar';
+import MobileDrawer from './MobileDrawer';
 
 const NAV = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -16,23 +19,68 @@ const NAV = [
 
 export default function Layout() {
   const [collapsed, setCollapsed] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { isConnected } = useWebSocket();
+  const { isMobile } = useBreakpoint();
 
   const handleGoLive = () => navigate('/go-live');
   const handleWatchParty = () => navigate(`/watch-party/party-${Date.now()}`);
+
+  if (isMobile) {
+    return (
+      <div className="min-h-screen bg-obsidian text-white">
+        {/* Mobile top bar */}
+        <header
+          className="fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-4 h-14 flex-shrink-0"
+          style={{ background: '#12121C', borderBottom: '1px solid rgba(255,255,255,0.08)' }}
+        >
+          <button
+            onClick={() => setDrawerOpen(true)}
+            className="p-2 hover:bg-white/10 rounded-xl transition text-white/60"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+
+          <span className="font-display text-xl tracking-widest text-white">
+            SEEWHY<span className="text-gold"> LIVE</span>
+          </span>
+
+          <div className="flex items-center gap-2">
+            {isConnected
+              ? <Wifi className="w-4 h-4 text-green-500" />
+              : <WifiOff className="w-4 h-4 text-red-500/60" />
+            }
+          </div>
+        </header>
+
+        <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+
+        {/* Content area — padded for fixed header and bottom tab bar */}
+        <main className="pt-14 pb-16 px-4 min-h-screen">
+          <Outlet />
+        </main>
+
+        <BottomTabBar />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex bg-obsidian">
       {/* Sidebar */}
       <aside
-        className={`${collapsed ? 'w-[72px]' : 'w-64'} flex-shrink-0 bg-obsidian-50 border-r border-white/8
+        className={`${collapsed ? 'w-[72px]' : 'w-64'} flex-shrink-0 bg-obsidian-50
                     flex flex-col fixed h-full z-40 transition-all duration-300`}
+        style={{ borderRight: '1px solid rgba(255,255,255,0.08)' }}
       >
         {/* Brand */}
-        <div className={`flex items-center border-b border-white/8 h-16 ${collapsed ? 'justify-center px-4' : 'px-5 gap-3'}`}>
+        <div
+          className={`flex items-center h-16 ${collapsed ? 'justify-center px-4' : 'px-5 gap-3'}`}
+          style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}
+        >
           {!collapsed && (
             <div className="flex-1 min-w-0">
               <span className="font-display text-gold text-2xl tracking-widest">SEEWHY</span>
@@ -53,7 +101,7 @@ export default function Layout() {
         </div>
 
         {/* Quick Actions */}
-        <div className={`p-3 border-b border-white/8 space-y-2`}>
+        <div className="p-3 space-y-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           {!collapsed && (
             <p className="text-[10px] font-mono text-white/30 uppercase tracking-widest px-2 mb-2">
               Broadcast
@@ -120,7 +168,7 @@ export default function Layout() {
         )}
 
         {/* User section */}
-        <div className="p-3 border-t border-white/8">
+        <div className="p-3" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
           <div className={`flex items-center gap-3 mb-3 ${collapsed ? 'justify-center' : ''}`}>
             <div className="w-9 h-9 bg-gradient-to-br from-burgundy to-gold/60 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
               {user?.username?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'S'}

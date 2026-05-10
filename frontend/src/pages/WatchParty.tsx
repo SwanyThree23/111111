@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  Play, Pause, Users, MessageCircle, DollarSign, Settings,
+  Play, Pause, Users, MessageCircle, DollarSign,
   Mic, MicOff, Video, VideoOff, MonitorUp, X, Search,
-  Crown, Shield, AlertTriangle, Volume2, VolumeX,
+  Crown, UserX, Radio,
 } from 'lucide-react';
 import api from '@/utils/api';
 import { useAuth } from '@/utils/auth';
@@ -29,6 +29,8 @@ interface WatchState {
   hostId: string;
 }
 
+type SideTab = 'chat' | 'people' | 'tips';
+
 export default function WatchParty() {
   const { roomName } = useParams<{ roomName: string }>();
   const navigate = useNavigate();
@@ -37,237 +39,240 @@ export default function WatchParty() {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [watchState, setWatchState] = useState<WatchState | null>(null);
   const [isMuted, setIsMuted] = useState(false);
-  const [isCameraOff, setIsCameraOff] = useState(false);
-  const [isScreenSharing, setIsScreenSharing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'chat' | 'participants' | 'leaderboard'>('chat');
-  const [showYouTubeSearch, setShowYouTubeSearch] = useState(false);
+  const [isCamOff, setIsCamOff] = useState(false);
+  const [isScreenShare, setIsScreenShare] = useState(false);
+  const [sideTab, setSideTab] = useState<SideTab>('chat');
+  const [showYTSearch, setShowYTSearch] = useState(false);
   const [isHost, setIsHost] = useState(false);
   const [chatHistory, setChatHistory] = useState<any[]>([]);
-  const [livekitToken, setLivekitToken] = useState('');
-  const playerRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
-    if (roomName) {
-      joinRoom();
-    }
+    if (roomName) joinRoom();
   }, [roomName]);
 
-  const joinRoom = async () => {
+  const joinRoom = useCallback(async () => {
     try {
       const res = await api.post(`/watch-party/rooms/${roomName}/join`);
-      setLivekitToken(res.data.token?.token || '');
       if (res.data.state) setWatchState(res.data.state);
       if (res.data.chatHistory) setChatHistory(res.data.chatHistory);
-
-      setIsHost(res.data.state?.hostId === user?.id);
-
-      // Mock participants for now
+      const host = res.data.state?.hostId === user?.id;
+      setIsHost(host);
       setParticipants([
         {
           id: user?.id || '1',
-          name: user?.email.split('@')[0] || 'You',
-          isHost: isHost,
+          name: user?.username || user?.email?.split('@')[0] || 'You',
+          isHost: host,
           isMuted: false,
           isCameraOff: false,
           isSpeaking: false,
         },
       ]);
-
       toast.success('Joined watch party!');
-    } catch (error) {
+    } catch {
       toast.error('Failed to join room');
     }
-  };
+  }, [roomName, user]);
 
-  const handleVideoSelect = async (videoId: string) => {
+  const selectVideo = async (videoId: string) => {
     try {
       await api.put(`/watch-party/rooms/${roomName}/state`, {
         videoId,
         isPlaying: false,
         currentTime: 0,
       });
-      setWatchState(prev => ({ ...(prev || { hostId: user?.id || '', isPlaying: false, currentTime: 0 }), videoId }));
-      setShowYouTubeSearch(false);
+      setWatchState((prev) => ({
+        ...(prev || { hostId: user?.id || '', isPlaying: false, currentTime: 0 }),
+        videoId,
+      }));
+      setShowYTSearch(false);
       toast.success('Video selected!');
-    } catch (error) {
+    } catch {
       toast.error('Failed to select video');
     }
   };
 
-  const togglePlayPause = async () => {
+  const togglePlay = async () => {
     if (!isHost || !watchState) return;
-    const newState = { ...watchState, isPlaying: !watchState.isPlaying };
-    setWatchState(newState);
-    await api.put(`/watch-party/rooms/${roomName}/state`, newState);
+    const next = { ...watchState, isPlaying: !watchState.isPlaying };
+    setWatchState(next);
+    await api.put(`/watch-party/rooms/${roomName}/state`, next).catch(() => {});
   };
 
-  const toggleScreenShare = async () => {
-    if (!isScreenSharing) {
+  const toggleScreen = async () => {
+    if (!isScreenShare) {
       try {
-        const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-        setIsScreenSharing(true);
-        stream.getVideoTracks()[0].onended = () => setIsScreenSharing(false);
-        toast.success('Screen sharing started');
-      } catch {
-        toast.error('Screen sharing denied');
-      }
+        const s = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        setIsScreenShare(true);
+        s.getVideoTracks()[0].onended = () => setIsScreenShare(false);
+        toast.success('Screen share started');
+      } catch { toast.error('Screen sharing denied'); }
     } else {
-      setIsScreenSharing(false);
-      toast('Screen sharing stopped');
+      setIsScreenShare(false);
     }
   };
 
+  const shareLink = () => {
+    navigator.clipboard.writeText(window.location.href);
+    toast.success('Room link copied!');
+  };
+
+  const SIDE_TABS: { id: SideTab; label: string; icon: typeof MessageCircle }[] = [
+    { id: 'chat', label: 'Chat', icon: MessageCircle },
+    { id: 'people', label: `${participants.length}`, icon: Users },
+    { id: 'tips', label: 'Tips', icon: DollarSign },
+  ];
+
   return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col">
+    <div className="min-h-screen bg-obsidian text-white flex flex-col">
       {/* Header */}
-      <div className="bg-gray-900 border-b border-gray-800 px-6 py-3 flex items-center justify-between">
+      <div className="bg-obsidian-50 border-b border-white/8 px-4 h-14 flex items-center justify-between flex-shrink-0"
+           style={{ borderBottomColor: 'rgba(255,255,255,0.08)' }}>
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/dashboard')} className="p-2 hover:bg-gray-800 rounded-lg">
-            <X className="w-5 h-5" />
+          <button onClick={() => navigate('/dashboard')} className="p-1.5 hover:bg-white/10 rounded-lg transition">
+            <X className="w-5 h-5 text-white/50" />
           </button>
-          <h1 className="text-lg font-bold">Watch Party</h1>
-          <span className="badge bg-green-900 text-green-300 text-xs">
-            {participants.length} / 20
-          </span>
+          <div className="flex items-center gap-2">
+            <Radio className="w-4 h-4 text-burgundy-light" />
+            <span className="font-display text-xl tracking-wider">WATCH PARTY</span>
+          </div>
+          <span className="badge badge-gold text-xs">{participants.length}/20</span>
           {isHost && (
-            <span className="flex items-center gap-1 text-xs bg-yellow-900 text-yellow-300 px-2 py-1 rounded-full">
+            <span className="flex items-center gap-1 badge bg-gold/10 text-gold text-xs"
+                  style={{ border: '1px solid rgba(201,175,55,0.2)' }}>
               <Crown className="w-3 h-3" /> Host
             </span>
           )}
         </div>
 
-        {/* Controls */}
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsMuted(!isMuted)}
-            className={`p-2 rounded-lg ${isMuted ? 'bg-red-900 text-red-300' : 'bg-gray-800 hover:bg-gray-700'}`}
+            className={`p-2 rounded-lg transition ${isMuted ? 'bg-red-900/50 text-red-300' : 'bg-white/5 hover:bg-white/10 text-white/70'}`}
           >
-            {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+            {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
           </button>
           <button
-            onClick={() => setIsCameraOff(!isCameraOff)}
-            className={`p-2 rounded-lg ${isCameraOff ? 'bg-red-900 text-red-300' : 'bg-gray-800 hover:bg-gray-700'}`}
+            onClick={() => setIsCamOff(!isCamOff)}
+            className={`p-2 rounded-lg transition ${isCamOff ? 'bg-red-900/50 text-red-300' : 'bg-white/5 hover:bg-white/10 text-white/70'}`}
           >
-            {isCameraOff ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
+            {isCamOff ? <VideoOff className="w-4 h-4" /> : <Video className="w-4 h-4" />}
           </button>
           <button
-            onClick={toggleScreenShare}
-            className={`p-2 rounded-lg ${isScreenSharing ? 'bg-purple-900 text-purple-300' : 'bg-gray-800 hover:bg-gray-700'}`}
+            onClick={toggleScreen}
+            className={`p-2 rounded-lg transition ${isScreenShare ? 'bg-burgundy/50 text-white' : 'bg-white/5 hover:bg-white/10 text-white/70'}`}
           >
-            <MonitorUp className="w-5 h-5" />
+            <MonitorUp className="w-4 h-4" />
+          </button>
+          <button onClick={shareLink} className="btn-ghost text-xs py-1.5 px-3 hidden sm:flex items-center gap-1">
+            Share Link
           </button>
         </div>
       </div>
 
+      {/* Main layout */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Main Area */}
-        <div className="flex-1 flex flex-col">
-          {/* Video Grid */}
-          <div className="flex-1 bg-black">
+        {/* Video + panel area */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Video player */}
+          <div className="flex-1 bg-black relative">
             {watchState?.videoId ? (
               <iframe
-                ref={playerRef}
                 className="w-full h-full"
                 src={`https://www.youtube.com/embed/${watchState.videoId}?autoplay=${watchState.isPlaying ? 1 : 0}&enablejsapi=1`}
                 allow="autoplay; fullscreen"
-                title="Watch Party Video"
+                title="Watch Party"
               />
             ) : (
-              <div className="h-full flex flex-col items-center justify-center gap-4">
-                <p className="text-gray-400 text-lg">No video selected</p>
+              <div className="w-full h-full flex flex-col items-center justify-center gap-4">
+                <div className="w-20 h-20 rounded-2xl flex items-center justify-center"
+                     style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <Play className="w-10 h-10 text-white/20" />
+                </div>
+                <p className="text-white/30 font-mono">No video selected</p>
                 {isHost && (
-                  <button
-                    onClick={() => setShowYouTubeSearch(true)}
-                    className="btn-primary flex items-center gap-2"
-                  >
-                    <Search className="w-5 h-5" />
-                    Search YouTube
+                  <button onClick={() => setShowYTSearch(true)} className="btn-primary flex items-center gap-2">
+                    <Search className="w-4 h-4" /> Search YouTube
                   </button>
                 )}
               </div>
             )}
           </div>
 
-          {/* Participant Grid (up to 20) */}
-          <div className="bg-gray-900 border-t border-gray-800 p-3">
-            <div className="grid grid-cols-5 gap-2 max-h-32 overflow-y-auto">
+          {/* Participant strip + host controls */}
+          <div className="bg-obsidian-50 border-t border-white/8 p-3 flex-shrink-0"
+               style={{ borderTopColor: 'rgba(255,255,255,0.08)' }}>
+            <div className="flex gap-2 overflow-x-auto pb-2 mb-3 scrollbar-thin">
               {participants.map((p) => (
                 <div
                   key={p.id}
-                  className={`relative bg-gray-800 rounded-lg aspect-video flex items-center justify-center text-sm ${
-                    p.isSpeaking ? 'ring-2 ring-green-500' : ''
+                  className={`relative flex-shrink-0 w-14 h-10 rounded-xl flex items-center justify-center transition ${
+                    p.isSpeaking ? 'shadow-[0_0_8px_rgba(34,197,94,0.4)]' : ''
                   }`}
+                  style={{
+                    background: 'rgba(26,26,40,1)',
+                    border: p.isSpeaking ? '1px solid rgba(34,197,94,0.5)' : '1px solid rgba(255,255,255,0.08)',
+                  }}
                 >
-                  <div className="text-center">
-                    <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-1 text-xs font-bold">
-                      {p.name[0].toUpperCase()}
-                    </div>
-                    <p className="text-xs text-gray-300 truncate px-1">{p.name}</p>
+                  <div className="w-6 h-6 bg-gradient-to-br from-burgundy to-gold/60 rounded-full flex items-center justify-center text-xs font-bold text-white">
+                    {p.name[0]?.toUpperCase()}
                   </div>
                   {p.isMuted && (
-                    <div className="absolute top-1 right-1">
-                      <MicOff className="w-3 h-3 text-red-400" />
+                    <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-600 rounded-full flex items-center justify-center">
+                      <MicOff className="w-2 h-2 text-white" />
                     </div>
                   )}
                   {p.isHost && (
-                    <div className="absolute top-1 left-1">
-                      <Crown className="w-3 h-3 text-yellow-400" />
-                    </div>
+                    <Crown className="absolute -top-1 -left-1 w-2.5 h-2.5 text-gold" />
                   )}
                 </div>
               ))}
+              {Array.from({ length: Math.min(3, 20 - participants.length) }).map((_, i) => (
+                <div key={`empty-${i}`}
+                  className="flex-shrink-0 w-14 h-10 rounded-xl flex items-center justify-center opacity-30"
+                  style={{ border: '1px dashed rgba(255,255,255,0.15)' }}
+                />
+              ))}
             </div>
 
-            {/* Playback controls (host only) */}
-            {isHost && watchState?.videoId && (
-              <div className="flex items-center justify-center gap-4 mt-3">
-                <button
-                  onClick={togglePlayPause}
-                  className="p-3 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full hover:scale-105 transition"
-                >
-                  {watchState?.isPlaying
-                    ? <Pause className="w-6 h-6" />
-                    : <Play className="w-6 h-6" />
-                  }
-                </button>
-                <button
-                  onClick={() => setShowYouTubeSearch(true)}
-                  className="p-2 bg-gray-700 rounded-lg hover:bg-gray-600 flex items-center gap-2 text-sm"
-                >
-                  <Search className="w-4 h-4" /> Change Video
+            {isHost && (
+              <div className="flex items-center justify-center gap-3">
+                {watchState?.videoId && (
+                  <button onClick={togglePlay} className="p-2.5 bg-burgundy hover:bg-burgundy-dark rounded-full transition">
+                    {watchState.isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+                  </button>
+                )}
+                <button onClick={() => setShowYTSearch(true)} className="btn-ghost flex items-center gap-2 text-sm py-2">
+                  <Search className="w-4 h-4" />
+                  {watchState?.videoId ? 'Change Video' : 'Pick a Video'}
                 </button>
               </div>
             )}
           </div>
         </div>
 
-        {/* Sidebar */}
-        <div className="w-80 bg-gray-900 border-l border-gray-800 flex flex-col">
+        {/* Right sidebar */}
+        <div className="w-72 xl:w-80 flex-shrink-0 flex flex-col"
+             style={{ background: '#12121C', borderLeft: '1px solid rgba(255,255,255,0.08)' }}>
           {/* Tabs */}
-          <div className="flex border-b border-gray-800">
-            {([
-              { id: 'chat', label: 'Chat', icon: MessageCircle },
-              { id: 'participants', label: `People (${participants.length})`, icon: Users },
-              { id: 'leaderboard', label: 'Tips', icon: DollarSign },
-            ] as const).map((tab) => (
+          <div className="flex flex-shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+            {SIDE_TABS.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 py-3 text-xs font-medium flex items-center justify-center gap-1 border-b-2 ${
-                  activeTab === tab.id
-                    ? 'border-purple-500 text-purple-400'
-                    : 'border-transparent text-gray-400 hover:text-gray-300'
+                onClick={() => setSideTab(tab.id)}
+                className={`flex-1 py-3 text-xs font-mono flex items-center justify-center gap-1.5 border-b-2 transition ${
+                  sideTab === tab.id
+                    ? 'border-gold text-gold'
+                    : 'border-transparent text-white/30 hover:text-white/50'
                 }`}
               >
-                <tab.icon className="w-4 h-4" />
+                <tab.icon className="w-3.5 h-3.5" />
                 {tab.label}
               </button>
             ))}
           </div>
 
-          {/* Tab Content */}
           <div className="flex-1 overflow-hidden flex flex-col">
-            {activeTab === 'chat' && (
+            {sideTab === 'chat' && (
               <ChatPanel
                 roomId={roomName || ''}
                 initialMessages={chatHistory}
@@ -275,35 +280,37 @@ export default function WatchParty() {
               />
             )}
 
-            {activeTab === 'participants' && (
-              <div className="flex-1 overflow-y-auto p-4 space-y-2">
+            {sideTab === 'people' && (
+              <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                <p className="text-xs font-mono text-white/30 uppercase tracking-widest px-1 mb-3">
+                  {participants.length} / 20 guests
+                </p>
                 {participants.map((p) => (
-                  <div key={p.id} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                  <div key={p.id} className="flex items-center justify-between p-3 rounded-xl"
+                       style={{ background: 'rgba(26,26,40,1)', border: '1px solid rgba(255,255,255,0.05)' }}>
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center text-sm font-bold">
-                        {p.name[0].toUpperCase()}
+                      <div className="w-8 h-8 bg-gradient-to-br from-burgundy to-gold/60 rounded-full flex items-center justify-center text-sm font-bold text-white">
+                        {p.name[0]?.toUpperCase()}
                       </div>
                       <div>
-                        <p className="text-sm font-medium">{p.name}</p>
-                        {p.isHost && <p className="text-xs text-yellow-400">Host</p>}
+                        <p className="text-sm font-medium text-white">{p.name}</p>
+                        {p.isHost && <p className="text-xs text-gold font-mono">Host</p>}
                       </div>
                     </div>
                     {isHost && p.id !== user?.id && (
-                      <div className="flex gap-1">
-                        <button className="p-1 hover:bg-gray-700 rounded text-red-400" title="Remove">
-                          <Shield className="w-4 h-4" />
-                        </button>
-                      </div>
+                      <button className="p-1.5 rounded-lg transition text-white/20 hover:text-red-400 hover:bg-red-900/20">
+                        <UserX className="w-3.5 h-3.5" />
+                      </button>
                     )}
                   </div>
                 ))}
               </div>
             )}
 
-            {activeTab === 'leaderboard' && (
+            {sideTab === 'tips' && (
               <div className="flex-1 overflow-hidden flex flex-col">
                 <TipLeaderboard roomId={roomName || ''} />
-                <div className="p-4 border-t border-gray-800">
+                <div className="p-4 flex-shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
                   <TipJar
                     roomId={roomName || ''}
                     recipientId={watchState?.hostId || ''}
@@ -316,17 +323,20 @@ export default function WatchParty() {
         </div>
       </div>
 
-      {/* YouTube Search Modal */}
-      {showYouTubeSearch && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-gray-900 rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b border-gray-800">
-              <h3 className="text-lg font-bold">Select YouTube Video</h3>
-              <button onClick={() => setShowYouTubeSearch(false)} className="p-2 hover:bg-gray-800 rounded-lg">
-                <X className="w-5 h-5" />
+      {/* YouTube search modal */}
+      {showYTSearch && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+             style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(4px)' }}>
+          <div className="w-full max-w-2xl max-h-[80vh] flex flex-col rounded-2xl shadow-2xl"
+               style={{ background: '#12121C', border: '1px solid rgba(255,255,255,0.10)' }}>
+            <div className="flex items-center justify-between p-4"
+                 style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+              <h3 className="font-display text-xl tracking-wider text-white">SELECT VIDEO</h3>
+              <button onClick={() => setShowYTSearch(false)} className="p-2 hover:bg-white/10 rounded-xl transition">
+                <X className="w-5 h-5 text-white/50" />
               </button>
             </div>
-            <YouTubeSearch onSelect={handleVideoSelect} />
+            <YouTubeSearch onSelect={selectVideo} />
           </div>
         </div>
       )}
