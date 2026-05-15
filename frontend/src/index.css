@@ -1,20 +1,135 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@700;800&family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  body { @apply bg-gray-50 text-gray-900 antialiased; font-family: 'Inter', system-ui, sans-serif; }
+  :root {
+    --burgundy: #800020;
+    --burgundy-dark: #7B1A34;
+    --gold: #C9AF37;
+    --gold-dark: #C9971C;
+    --obsidian: #0A0A0F;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    @apply bg-obsidian text-white antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+    background-image: radial-gradient(ellipse at 20% 50%, rgba(128, 0, 32, 0.03) 0%, transparent 60%),
+                      radial-gradient(ellipse at 80% 20%, rgba(201, 175, 55, 0.03) 0%, transparent 60%);
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+  ::selection { background: rgba(128, 0, 32, 0.4); color: white; }
 }
 
 @layer components {
-  .btn-primary { @apply px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold hover:scale-105 transition shadow-lg; }
-  .btn-secondary { @apply px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 font-medium transition; }
-  .btn-danger { @apply px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition; }
-  .card { @apply bg-white rounded-xl p-6 shadow-sm border hover:shadow-lg transition; }
-  .input { @apply w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition; }
-  .badge { @apply px-3 py-1 rounded-full text-xs font-medium; }
-  .badge-success { @apply bg-green-100 text-green-700; }
-  .badge-error { @apply bg-red-100 text-red-700; }
-  .badge-warning { @apply bg-yellow-100 text-yellow-700; }
-  .badge-info { @apply bg-blue-100 text-blue-700; }
+  /* Buttons */
+  .btn-primary {
+    @apply px-6 py-3 bg-burgundy hover:bg-burgundy-dark text-white rounded-xl font-semibold
+           transition-all duration-200 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed;
+    border: 1px solid rgba(155, 35, 53, 0.3);
+    box-shadow: 0 0 0 0 rgba(128,0,32,0);
+  }
+  .btn-primary:hover {
+    box-shadow: 0 0 20px rgba(128, 0, 32, 0.3);
+  }
+
+  .btn-gold {
+    @apply px-6 py-3 bg-gold hover:bg-gold-dark text-obsidian rounded-xl font-bold
+           transition-all duration-200 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply px-4 py-2 text-white/80 rounded-xl transition-all duration-200 font-medium;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.10);
+  }
+  .btn-ghost:hover {
+    background: rgba(255,255,255,0.10);
+  }
+
+  .btn-danger {
+    @apply px-4 py-2 bg-red-800 hover:bg-red-700 text-white rounded-xl font-medium transition;
+  }
+
+  /* Cards */
+  .card {
+    @apply bg-obsidian-50 rounded-2xl p-6;
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+
+  .card-dark {
+    @apply bg-obsidian-100 rounded-2xl p-6;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+
+  /* Inputs */
+  .input {
+    @apply w-full px-4 py-3 text-white rounded-xl outline-none transition placeholder-white/30 font-mono text-sm;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.10);
+  }
+  .input:focus {
+    border-color: rgba(201,175,55,0.5);
+    box-shadow: 0 0 0 1px rgba(201,175,55,0.2);
+  }
+
+  /* Badges */
+  .badge { @apply px-3 py-1 rounded-full text-xs font-mono font-medium; }
+  .badge-live { @apply text-red-300; background: rgba(127,29,29,0.5); border: 1px solid rgba(185,28,28,0.5); }
+  .badge-success { @apply text-green-400; background: rgba(20,83,45,0.4); border: 1px solid rgba(21,128,61,0.4); }
+  .badge-error { @apply text-red-400; background: rgba(127,29,29,0.4); border: 1px solid rgba(185,28,28,0.4); }
+  .badge-warning { @apply text-yellow-400; background: rgba(113,63,18,0.4); border: 1px solid rgba(161,98,7,0.4); }
+  .badge-info { @apply text-blue-400; background: rgba(23,37,84,0.4); border: 1px solid rgba(30,64,175,0.4); }
+  .badge-gold { @apply text-gold; background: rgba(201,175,55,0.10); border: 1px solid rgba(201,175,55,0.30); }
+
+  /* Nav links */
+  .nav-link {
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-white/50 hover:text-white font-medium;
+  }
+  .nav-link:hover { background: rgba(255,255,255,0.05); }
+
+  .nav-link-active {
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl text-gold font-medium;
+    background: rgba(201,175,55,0.10);
+    border: 1px solid rgba(201,175,55,0.20);
+  }
+
+  /* Live indicator */
+  .live-dot {
+    @apply w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse inline-block;
+    box-shadow: 0 0 8px rgba(239,68,68,0.8);
+  }
+
+  /* Font utilities */
+  .font-display { font-family: 'Bebas Neue', sans-serif; }
+  .font-brand { font-family: 'Syne', sans-serif; }
 }
+
+/* Glow effects */
+.glow-gold { box-shadow: 0 0 30px rgba(201, 175, 55, 0.2), 0 0 60px rgba(201, 175, 55, 0.1); }
+.glow-burgundy { box-shadow: 0 0 30px rgba(128, 0, 32, 0.4), 0 0 60px rgba(128, 0, 32, 0.2); }
+
+/* VU meter bars */
+.vu-bar { @apply w-1.5 rounded-full bg-gold transition-all; transition-duration: 75ms; }
+
+/* Paywall gradient */
+.paywall-fade {
+  background: linear-gradient(to bottom, transparent 0%, rgba(10, 10, 15, 0.7) 40%, rgba(10, 10, 15, 0.97) 100%);
+}
+
+/* Divider */
+.divider { border-top: 1px solid rgba(255,255,255,0.08); }
+
+/* Subtle hover rows */
+.hover\:bg-white\/3:hover { background: rgba(255,255,255,0.03); }

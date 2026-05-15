@@ -1,6 +1,7 @@
 import ffmpeg from 'fluent-ffmpeg';
 import { prisma } from '../server';
 import { broadcastMetrics, broadcastStreamStatus } from '../websocket';
+import { notificationsQueue } from '../workers';
 import { logger } from '../config/logger';
 
 interface ActiveStream {
@@ -46,11 +47,16 @@ class StreamManager {
 
     command.on('start', async () => {
       logger.info(`Stream ${streamId} started`);
-      await prisma.stream.update({
+      const updated = await prisma.stream.update({
         where: { id: streamId },
         data: { status: 'LIVE', isLive: true, startedAt: new Date() },
       });
       broadcastStreamStatus(streamId, 'LIVE');
+
+      // Notify followers asynchronously
+      notificationsQueue
+        .add('stream_live', { type: 'stream_live', userId: updated.userId, payload: { streamId } })
+        .catch(() => { /* ignore queue errors */ });
     });
 
     command.on('progress', async (progress) => {

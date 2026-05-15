@@ -9,130 +9,120 @@ interface TipJarProps {
   recipientName: string;
 }
 
-const PRESET_AMOUNTS = [
-  { label: '$1', cents: 100, icon: Heart },
-  { label: '$5', cents: 500, icon: Zap },
-  { label: '$10', cents: 1000, icon: Sparkles },
-  { label: '$25', cents: 2500, icon: DollarSign },
+const TIERS = [
+  { label: 'Bronze', amount: 100, icon: Heart, color: 'bg-amber-900/40 border-amber-700/40 text-amber-400' },
+  { label: 'Silver', amount: 500, icon: Zap, color: 'bg-gray-700/40 border-gray-500/40 text-gray-300' },
+  { label: 'Gold', amount: 1500, icon: Sparkles, color: 'bg-gold/10 border-gold/30 text-gold' },
 ];
 
-export default function TipJar({ roomId, recipientId, recipientName }: TipJarProps) {
-  const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
-  const [customAmount, setCustomAmount] = useState('');
-  const [message, setMessage] = useState('');
-  const [isSending, setIsSending] = useState(false);
-  const [showCelebration, setShowCelebration] = useState(false);
+const CREATOR_SHARE = 0.90;
 
-  const getFinalAmount = () => {
-    if (selectedAmount) return selectedAmount;
-    const custom = parseInt(customAmount);
-    return isNaN(custom) ? 0 : custom * 100;
+export default function TipJar({ roomId, recipientId, recipientName }: TipJarProps) {
+  const [selected, setSelected] = useState<number | null>(null);
+  const [custom, setCustom] = useState('');
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  const getAmount = () => {
+    if (selected !== null) return selected;
+    const c = parseInt(custom);
+    return isNaN(c) ? 0 : c * 100;
   };
 
-  const sendTip = async () => {
-    const amount = getFinalAmount();
-    if (!amount || amount < 100) {
-      toast.error('Minimum tip is $1');
-      return;
-    }
-
-    setIsSending(true);
+  const send = async () => {
+    const amount = getAmount();
+    if (!amount || amount < 100) { toast.error('Minimum tip is $1'); return; }
+    setSending(true);
     try {
-      const res = await api.post('/payments/tip', {
+      await api.post('/payments/tip', {
         amount,
         currency: 'usd',
         toUserId: recipientId,
         toUsername: recipientName,
-        toStripeAccountId: 'acct_placeholder', // Real ID from user profile
         roomId,
         message,
       });
-
-      // Show celebration
-      setShowCelebration(true);
-      setTimeout(() => setShowCelebration(false), 3000);
-
-      const { breakdown } = res.data;
-      toast.success(
-        `Tip sent! ${recipientName} receives $${(breakdown.creatorReceives / 100).toFixed(2)} (platform fee: $${(breakdown.platformFee / 100).toFixed(2)})`
-      );
-
-      setSelectedAmount(null);
-      setCustomAmount('');
+      setSent(true);
+      setTimeout(() => setSent(false), 3000);
+      const creatorGets = Math.floor(amount * CREATOR_SHARE) / 100;
+      toast.success(`Tip sent! ${recipientName} receives $${creatorGets.toFixed(2)}`);
+      setSelected(null);
+      setCustom('');
       setMessage('');
-    } catch (error) {
-      toast.error('Failed to send tip. Set up Stripe first in Settings.');
+    } catch {
+      toast.error('Tip failed. Make sure Stripe is connected in Settings.');
     } finally {
-      setIsSending(false);
+      setSending(false);
     }
   };
 
+  if (sent) {
+    return (
+      <div className="text-center py-6">
+        <div className="text-3xl mb-2">✨</div>
+        <p className="text-gold font-display text-xl tracking-wider">TIP SENT!</p>
+        <p className="text-white/40 font-mono text-xs mt-1">Thanks for supporting {recipientName}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
-      {showCelebration && (
-        <div className="text-center py-3 animate-bounce">
-          <span className="text-2xl">🎉✨💜</span>
-          <p className="text-sm text-green-400 font-bold">Tip sent!</p>
-        </div>
-      )}
-
-      <p className="text-xs text-gray-400 font-medium">
-        Tip {recipientName} — <span className="text-purple-400">90% goes directly to creator</span>
+      <p className="text-xs font-mono text-white/40">
+        90% goes directly to <span className="text-gold">{recipientName}</span>
       </p>
 
-      {/* Preset amounts */}
-      <div className="grid grid-cols-4 gap-2">
-        {PRESET_AMOUNTS.map(({ label, cents, icon: Icon }) => (
+      {/* Tiers */}
+      <div className="grid grid-cols-3 gap-2">
+        {TIERS.map(({ label, amount, icon: Icon, color }) => (
           <button
-            key={cents}
-            onClick={() => { setSelectedAmount(cents); setCustomAmount(''); }}
-            className={`flex flex-col items-center py-2 rounded-lg text-xs font-bold transition ${
-              selectedAmount === cents
-                ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
-                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+            key={amount}
+            onClick={() => { setSelected(amount); setCustom(''); }}
+            className={`flex flex-col items-center py-3 rounded-xl border transition text-xs font-mono font-bold ${
+              selected === amount ? color : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10'
             }`}
           >
             <Icon className="w-4 h-4 mb-1" />
             {label}
+            <span className="opacity-70">${(amount / 100).toFixed(0)}</span>
           </button>
         ))}
       </div>
 
-      {/* Custom amount */}
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
-          <input
-            type="number"
-            value={customAmount}
-            onChange={e => { setCustomAmount(e.target.value); setSelectedAmount(null); }}
-            placeholder="Custom"
-            className="w-full bg-gray-800 text-white pl-7 pr-3 py-2 rounded-lg text-sm outline-none focus:ring-1 focus:ring-purple-500"
-            min="1"
-          />
-        </div>
+      {/* Custom */}
+      <div className="relative">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 font-mono text-sm">$</span>
+        <input
+          type="number"
+          value={custom}
+          onChange={(e) => { setCustom(e.target.value); setSelected(null); }}
+          placeholder="Custom amount"
+          className="input pl-7"
+          min="1"
+        />
       </div>
 
       {/* Message */}
       <input
         value={message}
-        onChange={e => setMessage(e.target.value)}
-        placeholder="Add a message (optional)"
-        className="w-full bg-gray-800 text-white px-3 py-2 rounded-lg text-sm outline-none focus:ring-1 focus:ring-purple-500 placeholder-gray-500"
+        onChange={(e) => setMessage(e.target.value)}
+        placeholder="Message (optional)"
+        className="input"
         maxLength={200}
       />
 
-      {/* Send button */}
+      {/* Send */}
       <button
-        onClick={sendTip}
-        disabled={isSending || !getFinalAmount()}
-        className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold hover:scale-105 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        onClick={send}
+        disabled={sending || !getAmount()}
+        className="btn-gold w-full flex items-center justify-center gap-2 disabled:opacity-40"
       >
-        <DollarSign className="w-5 h-5" />
-        {isSending ? 'Sending...' : `Send ${getFinalAmount() ? `$${(getFinalAmount() / 100).toFixed(2)}` : 'Tip'}`}
+        <DollarSign className="w-4 h-4" />
+        {sending ? 'Sending...' : getAmount() ? `Send $${(getAmount() / 100).toFixed(2)}` : 'Send Tip'}
       </button>
 
-      <p className="text-xs text-gray-600 text-center">
+      <p className="text-xs font-mono text-white/20 text-center">
         10% platform fee · Secure via Stripe
       </p>
     </div>
