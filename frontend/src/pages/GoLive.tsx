@@ -66,6 +66,8 @@ export default function GoLive() {
   const [tags,     setTags]     = useState('');
   const [platforms, setPlatforms] = useState<string[]>(['youtube', 'twitch']);
   const [paywallEnabled, setPaywallEnabled] = useState(false);
+  const [isPublic,  setIsPublic]  = useState(true);
+  const [category,  setCategory]  = useState('');
   const [quality,  setQuality]  = useState<'1080p' | '720p' | '480p'>('1080p');
   const [showSettings, setShowSettings] = useState(false);
   const [streamKey, setStreamKey] = useState('');
@@ -186,8 +188,12 @@ export default function GoLive() {
     setIsGoingLive(true);
     try {
       const res = await api.post('/streams', {
-        title, destinations: platforms, paywallEnabled,
+        title,
+        destinations: platforms,
+        paywallEnabled,
         paywallPreviewSeconds: 120,
+        isPublic,
+        category: category || undefined,
         tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
       });
       const sid = res.data.stream?.id;
@@ -670,6 +676,42 @@ export default function GoLive() {
               <div>
                 <label className="block text-xs font-mono text-white/40 uppercase tracking-widest mb-2">Tags</label>
                 <input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="music, gaming (comma separated)" className="input" />
+              </div>
+            </div>
+
+            {/* Visibility + Category */}
+            <div className="card space-y-4">
+              <h3 className="font-display text-xl tracking-wider text-white">DISCOVERY</h3>
+
+              {/* Public / Private toggle */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-white/80 text-sm font-medium">Public stream</p>
+                  <p className="text-white/30 font-mono text-xs mt-0.5">
+                    {isPublic ? 'Anyone can find this on Discover' : 'Only you can see this stream'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsPublic((v) => !v)}
+                  className={`relative w-12 h-6 rounded-full transition-colors ${isPublic ? 'bg-green-500' : 'bg-white/20'}`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${isPublic ? 'left-7' : 'left-1'}`} />
+                </button>
+              </div>
+
+              {/* Category */}
+              <div>
+                <label className="block text-xs font-mono text-white/40 uppercase tracking-widest mb-2">Category</label>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="input"
+                >
+                  <option value="">— None —</option>
+                  {['gaming', 'music', 'talk', 'sports', 'education', 'tech', 'creative'].map((c) => (
+                    <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+                  ))}
+                </select>
               </div>
             </div>
 

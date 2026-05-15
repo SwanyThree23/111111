@@ -30,6 +30,12 @@ export default function Settings() {
   const [notifTip, setNotifTip] = useState(true);
   const [notifViewer, setNotifViewer] = useState(false);
   const [notifChat, setNotifChat] = useState(true);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loadingNotifs, setLoadingNotifs] = useState(false);
+
+  // Profile visibility
+  const [isPublic, setIsPublic] = useState(user?.isPublic ?? true);
 
   useEffect(() => {
     fetchStreamKey();
@@ -60,11 +66,30 @@ export default function Settings() {
     } catch {}
   };
 
+  const fetchNotifications = async () => {
+    setLoadingNotifs(true);
+    try {
+      const res = await api.get('/users/me/notifications');
+      setNotifications(res.data.notifications || []);
+      setUnreadCount(res.data.unreadCount || 0);
+    } catch {} finally {
+      setLoadingNotifs(false);
+    }
+  };
+
+  const markAllRead = async () => {
+    try {
+      await api.patch('/users/me/notifications/read-all');
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setUnreadCount(0);
+    } catch {}
+  };
+
   const saveProfile = async (e: FormEvent) => {
     e.preventDefault();
     setSavingProfile(true);
     try {
-      await api.patch('/auth/profile', { username: displayName, bio });
+      await api.patch('/auth/profile', { username: displayName, bio, isPublic });
       toast.success('Profile updated');
     } catch {
       toast.error('Failed to update profile');
@@ -183,6 +208,23 @@ export default function Settings() {
                 maxLength={300}
               />
             </div>
+            {/* Profile visibility */}
+            <div className="flex items-center justify-between pt-2 border-t border-white/8">
+              <div>
+                <p className="text-white/80 text-sm font-medium">Public profile</p>
+                <p className="text-white/30 font-mono text-xs mt-0.5">
+                  {isPublic ? 'Anyone can view your profile and public streams' : 'Profile hidden from Discover'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPublic((v) => !v)}
+                className={`relative w-11 h-6 rounded-full transition-colors ${isPublic ? 'bg-green-500' : 'bg-white/20'}`}
+              >
+                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${isPublic ? 'left-6' : 'left-1'}`} />
+              </button>
+            </div>
+
             <button type="submit" disabled={savingProfile} className="btn-primary disabled:opacity-40">
               {savingProfile ? 'Saving...' : 'Save Profile'}
             </button>
@@ -343,32 +385,86 @@ export default function Settings() {
 
       {/* Notifications tab */}
       {activeTab === 'notifications' && (
-        <div className="card space-y-4">
-          <h2 className="font-display text-xl tracking-wider text-white">NOTIFICATION PREFERENCES</h2>
-          {[
-            { id: 'tip', label: 'Tip received', sub: 'Alert when a viewer sends a tip', value: notifTip, set: setNotifTip },
-            { id: 'viewer', label: 'Viewer milestone', sub: 'Alert at 10, 50, 100+ viewers', value: notifViewer, set: setNotifViewer },
-            { id: 'chat', label: 'Guardian AI alerts', sub: 'Moderation flags and actions', value: notifChat, set: setNotifChat },
-          ].map((pref) => (
-            <div key={pref.id} className="flex items-center justify-between py-3 border-b border-white/8 last:border-0">
-              <div>
-                <p className="text-sm font-medium text-white">{pref.label}</p>
-                <p className="text-xs font-mono text-white/40 mt-0.5">{pref.sub}</p>
+        <div className="space-y-4">
+          {/* Notification preferences */}
+          <div className="card space-y-4">
+            <h2 className="font-display text-xl tracking-wider text-white">ALERT PREFERENCES</h2>
+            {[
+              { id: 'tip',    label: 'Tip received',     sub: 'Alert when a viewer sends a tip',    value: notifTip,    set: setNotifTip },
+              { id: 'viewer', label: 'Viewer milestone',  sub: 'Alert at 10, 50, 100+ viewers',      value: notifViewer, set: setNotifViewer },
+              { id: 'chat',   label: 'Guardian AI alerts', sub: 'Moderation flags and actions',      value: notifChat,   set: setNotifChat },
+            ].map((pref) => (
+              <div key={pref.id} className="flex items-center justify-between py-3 border-b border-white/8 last:border-0">
+                <div>
+                  <p className="text-sm font-medium text-white">{pref.label}</p>
+                  <p className="text-xs font-mono text-white/40 mt-0.5">{pref.sub}</p>
+                </div>
+                <button
+                  onClick={() => pref.set(!pref.value)}
+                  className={`relative w-11 h-6 rounded-full transition-colors ${pref.value ? 'bg-burgundy' : 'bg-white/20'}`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${pref.value ? 'left-6' : 'left-1'}`} />
+                </button>
               </div>
-              <button
-                onClick={() => pref.set(!pref.value)}
-                className={`relative w-11 h-6 rounded-full transition-colors ${pref.value ? 'bg-burgundy' : 'bg-white/20'}`}
-              >
-                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${pref.value ? 'left-6' : 'left-1'}`} />
-              </button>
+            ))}
+          </div>
+
+          {/* In-app inbox */}
+          <div className="card space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <h2 className="font-display text-xl tracking-wider text-white">INBOX</h2>
+                {unreadCount > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-red-600/20 text-red-400 text-xs font-mono border border-red-500/30">
+                    {unreadCount} unread
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {unreadCount > 0 && (
+                  <button onClick={markAllRead} className="text-xs font-mono text-white/40 hover:text-white/70 transition">
+                    Mark all read
+                  </button>
+                )}
+                <button
+                  onClick={fetchNotifications}
+                  disabled={loadingNotifs}
+                  className="btn-ghost text-xs py-1.5 px-3"
+                >
+                  {loadingNotifs ? 'Loading…' : notifications.length === 0 ? 'Load inbox' : 'Refresh'}
+                </button>
+              </div>
             </div>
-          ))}
-          <button
-            onClick={() => toast.success('Preferences saved')}
-            className="btn-primary mt-2"
-          >
-            Save Preferences
-          </button>
+
+            {notifications.length === 0 ? (
+              <div className="text-center py-8">
+                <Bell className="w-8 h-8 mx-auto mb-2 text-white/10" />
+                <p className="text-white/30 font-mono text-sm">
+                  {loadingNotifs ? 'Loading…' : 'No notifications yet'}
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-white/5">
+                {notifications.map((n) => (
+                  <div
+                    key={n.id}
+                    className={`py-3 flex gap-3 ${n.isRead ? 'opacity-50' : ''}`}
+                  >
+                    {!n.isRead && (
+                      <div className="mt-1.5 w-2 h-2 rounded-full bg-red-500 shrink-0" />
+                    )}
+                    <div className={`${n.isRead ? 'ml-5' : ''} flex-1 min-w-0`}>
+                      <p className="text-white text-sm font-medium">{n.title}</p>
+                      <p className="text-white/50 text-xs font-mono mt-0.5">{n.body}</p>
+                      <p className="text-white/20 text-xs font-mono mt-1">
+                        {new Date(n.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

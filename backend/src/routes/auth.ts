@@ -31,9 +31,11 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
       data: { email, username, passwordHash, firstName, lastName },
     });
 
-    const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, {
-      expiresIn: '7d',
-    });
+    const token = jwt.sign(
+      { id: user.id, email: user.email, username: user.username, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
 
     res.status(201).json({
       token,
@@ -67,9 +69,11 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, {
-      expiresIn: '7d',
-    });
+    const token = jwt.sign(
+      { id: user.id, email: user.email, username: user.username, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
 
     res.json({
       token,
@@ -110,11 +114,21 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res: Response): Pr
 // PATCH /api/auth/profile
 router.patch('/profile', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { firstName, lastName, username, avatar } = req.body;
+    const { firstName, lastName, username, avatar, bio, isPublic } = req.body;
     const user = await prisma.user.update({
       where: { id: req.user!.id },
-      data: { firstName, lastName, username, avatar },
-      select: { id: true, email: true, username: true, firstName: true, lastName: true, avatar: true, role: true },
+      data: {
+        ...(firstName  !== undefined && { firstName }),
+        ...(lastName   !== undefined && { lastName }),
+        ...(username   !== undefined && { username }),
+        ...(avatar     !== undefined && { avatar }),
+        ...(bio        !== undefined && { bio }),
+        ...(isPublic   !== undefined && { isPublic }),
+      },
+      select: {
+        id: true, email: true, username: true, firstName: true,
+        lastName: true, avatar: true, bio: true, isPublic: true, role: true,
+      },
     });
     res.json({ user });
   } catch (err) {

@@ -1,13 +1,13 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Video, BarChart3, Settings, Radio } from 'lucide-react';
+import { LayoutDashboard, Video, Settings, Radio, Compass } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const TABS = [
-  { name: 'Home', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Streams', href: '/streams', icon: Video },
-  { name: 'Live', href: '/go-live', icon: Radio, special: true },
-  { name: 'Analytics', href: '/analytics', icon: BarChart3 },
-  { name: 'Settings', href: '/settings', icon: Settings },
+  { name: 'Home',     href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Discover', href: '/discover',  icon: Compass },
+  { name: 'Live',     href: '/go-live',   icon: Radio, special: true },
+  { name: 'Streams',  href: '/streams',   icon: Video },
+  { name: 'Settings', href: '/settings',  icon: Settings },
 ];
 
 export default function BottomTabBar() {

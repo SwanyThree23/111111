@@ -2,15 +2,16 @@ import { useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Video, BarChart3, Settings, LogOut,
-  Radio, Tv2, X, ExternalLink,
+  Radio, Tv2, X, ExternalLink, Compass,
 } from 'lucide-react';
 import { useAuth } from '@/utils/auth';
 
 const NAV = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Streams', href: '/streams', icon: Video },
+  { name: 'Discover',  href: '/discover',  icon: Compass },
+  { name: 'Streams',   href: '/streams',   icon: Video },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
-  { name: 'Settings', href: '/settings', icon: Settings },
+  { name: 'Settings',  href: '/settings',  icon: Settings },
 ];
 
 interface MobileDrawerProps {

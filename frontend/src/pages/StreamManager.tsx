@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Trash2, ExternalLink, Radio, Play } from 'lucide-react';
+import { Plus, Trash2, ExternalLink, Radio, Play, Globe, Lock } from 'lucide-react';
 import api from '@/utils/api';
 import toast from 'react-hot-toast';
 import { Stream } from '@/types';
@@ -77,12 +77,23 @@ export default function StreamManager() {
                 <p className="text-sm text-white/40 font-mono line-clamp-2">{s.description}</p>
               )}
 
-              <div className="text-xs font-mono text-white/30">
+              <div className="flex items-center gap-3 text-xs font-mono text-white/30">
                 {Array.isArray(s.destinations) && s.destinations.length > 0
-                  ? `${s.destinations.length} destination${s.destinations.length > 1 ? 's' : ''}`
+                  ? `${s.destinations.length} dest.`
                   : 'No destinations'}
-                <span className="mx-2">·</span>
+                <span>·</span>
                 {new Date(s.createdAt).toLocaleDateString()}
+                <span className="ml-auto">
+                  {s.isPublic ? (
+                    <span className="flex items-center gap-1 text-green-400/70">
+                      <Globe className="w-3 h-3" /> Public
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-white/20">
+                      <Lock className="w-3 h-3" /> Private
+                    </span>
+                  )}
+                </span>
               </div>
 
               <div className="flex gap-2 mt-auto pt-2 border-t border-white/8">
