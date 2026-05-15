@@ -1,6 +1,7 @@
 import { Express } from 'express';
 import authRoutes from './auth';
 import streamRoutes from './streams';
+import userRoutes from './users';
 import vdoRoutes from './vdo';
 import analyticsRoutes from './analytics';
 import aiRoutes from './ai';
@@ -14,6 +15,7 @@ export function setupRoutes(app: Express): void {
 
   app.use('/api/auth', authRoutes);
   app.use('/api/streams', streamRoutes);
+  app.use('/api/users', userRoutes);
   app.use('/api/vdo', vdoRoutes);
   app.use('/api/analytics', analyticsRoutes);
   app.use('/api/ai', aiRoutes);

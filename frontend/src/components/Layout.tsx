@@ -1,20 +1,22 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Video, BarChart3, Settings, LogOut,
-  Menu, ChevronLeft, Radio, Tv2, Wifi, WifiOff,
+  Menu, ChevronLeft, Radio, Tv2, Wifi, WifiOff, Compass, Bell,
 } from 'lucide-react';
 import { useAuth } from '@/utils/auth';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
+import api from '@/utils/api';
 import BottomTabBar from './BottomTabBar';
 import MobileDrawer from './MobileDrawer';
 
 const NAV = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Streams', href: '/streams', icon: Video },
+  { name: 'Discover',  href: '/discover',  icon: Compass },
+  { name: 'Streams',   href: '/streams',   icon: Video },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
-  { name: 'Settings', href: '/settings', icon: Settings },
+  { name: 'Settings',  href: '/settings',  icon: Settings },
 ];
 
 export default function Layout() {
@@ -25,6 +27,14 @@ export default function Layout() {
   const { user, logout } = useAuth();
   const { isConnected } = useWebSocket();
   const { isMobile } = useBreakpoint();
+
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    api.get('/users/me/notifications')
+      .then((r) => setUnreadCount(r.data.unreadCount ?? 0))
+      .catch(() => {/* silently ignore */});
+  }, []);
 
   const handleGoLive = () => navigate('/go-live');
   const handleWatchParty = () => navigate(`/watch-party/party-${Date.now()}`);
@@ -170,14 +180,35 @@ export default function Layout() {
         {/* User section */}
         <div className="p-3" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
           <div className={`flex items-center gap-3 mb-3 ${collapsed ? 'justify-center' : ''}`}>
-            <div className="w-9 h-9 bg-gradient-to-br from-burgundy to-gold/60 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-              {user?.username?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'S'}
-            </div>
-            {!collapsed && (
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-white truncate">{user?.username || 'Creator'}</p>
-                <p className="text-xs text-white/40 font-mono truncate">{user?.email}</p>
+            <Link
+              to={user?.username ? `/profile/${user.username}` : '/settings'}
+              title="View profile"
+              className="relative shrink-0"
+            >
+              <div className="w-9 h-9 bg-gradient-to-br from-burgundy to-gold/60 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                {user?.username?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'S'}
               </div>
+            </Link>
+            {!collapsed && (
+              <>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white truncate">{user?.username || 'Creator'}</p>
+                  <p className="text-xs text-white/40 font-mono truncate">{user?.email}</p>
+                </div>
+                {/* Notification bell */}
+                <Link
+                  to="/settings"
+                  title="Notifications"
+                  className="relative p-1.5 rounded-lg hover:bg-white/10 text-white/40 hover:text-white/70 transition"
+                >
+                  <Bell className="w-4 h-4" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-red-600 text-white text-[9px] font-bold flex items-center justify-center">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </Link>
+              </>
             )}
           </div>
           <button

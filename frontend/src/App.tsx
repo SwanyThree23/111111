@@ -6,6 +6,7 @@ import Layout from './components/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import Discover from './pages/Discover';
 import StreamManager from './pages/StreamManager';
 import StreamView from './pages/StreamView';
 import Analytics from './pages/Analytics';
@@ -14,6 +15,7 @@ import VdoGuests from './pages/VdoGuests';
 import WatchParty from './pages/WatchParty';
 import GoLive from './pages/GoLive';
 import Onboarding from './pages/Onboarding';
+import UserProfile from './pages/UserProfile';
 
 function OnboardingGuard({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
@@ -88,6 +90,7 @@ function App() {
         element={isAuthenticated ? <GoLive /> : <Navigate to="/login" />}
       />
 
+      {/* Public profile and discover — accessible without login when inside layout */}
       <Route
         element={
           isAuthenticated
@@ -96,11 +99,13 @@ function App() {
         }
       >
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/discover" element={<Discover />} />
         <Route path="/streams" element={<StreamManager />} />
         <Route path="/streams/:id" element={<StreamView />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/vdo-guests/:streamId" element={<VdoGuests />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/profile/:username" element={<UserProfile />} />
       </Route>
 
       <Route path="/" element={<Navigate to={isAuthenticated ? '/dashboard' : '/login'} />} />

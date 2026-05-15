@@ -6,6 +6,7 @@ export interface AuthRequest extends Request {
   user?: {
     id: string;
     email: string;
+    username: string;
     role: string;
   };
 }
@@ -28,7 +29,7 @@ export function authenticateToken(req: AuthRequest, res: Response, next: NextFun
         res.status(401).json({ error: 'User not found' });
         return;
       }
-      req.user = { id: user.id, email: user.email, role: user.role };
+      req.user = { id: user.id, email: user.email, username: user.username, role: user.role };
       next();
     }).catch(() => {
       res.status(500).json({ error: 'Internal server error' });
@@ -61,7 +62,7 @@ export function optionalAuth(req: AuthRequest, res: Response, next: NextFunction
 
   try {
     const secret = process.env.JWT_SECRET || 'fallback-secret';
-    const decoded = jwt.verify(token, secret) as { id: string; email: string; role: string };
+    const decoded = jwt.verify(token, secret) as { id: string; email: string; username: string; role: string };
     req.user = decoded;
   } catch {
     // ignore invalid token for optional auth
